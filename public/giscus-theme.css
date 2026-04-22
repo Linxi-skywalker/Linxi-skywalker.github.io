@@ -1,0 +1,197 @@
+:root {
+  --color-canvas-default: #f4efe6;
+  --color-canvas-subtle: #ede6d9;
+  --color-canvas-inset: #e8e0d4;
+  --color-border-default: #d4c9b8;
+  --color-border-muted: #d4c9b8;
+  --color-neutral-muted: rgba(212,201,184,0.3);
+  --color-fg-default: #1c1a17;
+  --color-fg-muted: #6b6459;
+  --color-fg-subtle: #b0a898;
+  --color-btn-primary-bg: #7a3228;
+  --color-btn-primary-hover-bg: #8f3b2f;
+  --color-btn-primary-text: #f4efe6;
+  --color-btn-primary-border: #7a3228;
+  --color-btn-bg: #ede6d9;
+  --color-btn-hover-bg: #e8e0d4;
+  --color-btn-text: #1c1a17;
+  --color-btn-border: #d4c9b8;
+  --color-accent-fg: #7a3228;
+  --color-accent-emphasis: #7a3228;
+  --color-accent-muted: rgba(122,50,40,0.15);
+  --color-danger-fg: #a32d2d;
+  --color-input-bg: #f4efe6;
+  --color-input-contrast-bg: #ede6d9;
+  --color-header-bg: #ede6d9;
+  --color-header-text: #1c1a17;
+  --color-prettylights-syntax-comment: #6b6459;
+  --color-prettylights-syntax-string: #7a3228;
+  --color-prettylights-syntax-keyword: #2a4a7a;
+  --color-prettylights-syntax-entity: #2a4a7a;
+  --color-prettylights-syntax-storage-modifier-import: #1c1a17;
+  --color-prettylights-syntax-entity-tag: #7a3228;
+  --color-prettylights-syntax-constant: #b0a898;
+  --color-prettylights-syntax-string-regexp: #7a3228;
+  --color-prettylights-syntax-markup-list: #1c1a17;
+  --color-prettylights-syntax-markup-heading: #1c1a17;
+  --color-prettylights-syntax-markup-italic: #6b6459;
+  --color-prettylights-syntax-markup-bold: #1c1a17;
+  --color-prettylights-syntax-markup-deleted-text: #f4efe6;
+  --color-prettylights-syntax-markup-deleted-bg: #a32d2d;
+  --color-prettylights-syntax-markup-inserted-text: #f4efe6;
+  --color-prettylights-syntax-markup-inserted-bg: #7a3228;
+  --color-prettylights-syntax-markup-changed-text: #1c1a17;
+  --color-prettylights-syntax-markup-changed-bg: #d4c9b8;
+  --color-prettylights-syntax-markup-ignored-text: #b0a898;
+  --color-prettylights-syntax-markup-ignored-bg: #ede6d9;
+  --color-prettylights-syntax-meta-diff-range: #2a4a7a;
+  --color-prettylights-syntax-sublimelinter-gutter-mark: #b0a898;
+}
+
+body {
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  background: transparent;
+}
+
+.gsc-comment-box {
+  border: 1px solid var(--color-border-default);
+  border-radius: 2px;
+  background: var(--color-canvas-default);
+}
+
+.gsc-comment-box-tabs {
+  border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-canvas-subtle);
+  border-radius: 0;
+}
+
+.gsc-comment-box-tab-button {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  border-radius: 0;
+}
+
+.gsc-comment-box-tab-button.selected {
+  border-bottom: 2px solid #7a3228;
+  color: #1c1a17;
+}
+
+.gsc-comment-box-textarea {
+  background: var(--color-canvas-default);
+  border: none;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 16px;
+  color: #1c1a17;
+  border-radius: 0;
+  resize: vertical;
+}
+
+.gsc-comment-box-textarea:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.btn-primary {
+  background: #7a3228 !important;
+  border-color: #7a3228 !important;
+  color: #f4efe6 !important;
+  border-radius: 2px !important;
+  font-family: 'EB Garamond', Georgia, serif !important;
+  font-style: italic;
+  letter-spacing: 0.04em;
+}
+
+.btn-primary:hover {
+  background: #8f3b2f !important;
+  border-color: #8f3b2f !important;
+}
+
+.btn {
+  border-radius: 2px !important;
+  font-family: 'EB Garamond', Georgia, serif !important;
+}
+
+.gsc-header {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  color: #1c1a17;
+}
+
+.gsc-reactions-count, .gsc-comments-count {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  color: #6b6459;
+}
+
+.gsc-comment {
+  border: 1px solid var(--color-border-default);
+  border-radius: 2px;
+  background: var(--color-canvas-default);
+}
+
+.gsc-comment-header {
+  background: var(--color-canvas-subtle);
+  border-bottom: 1px solid var(--color-border-default);
+  border-radius: 0;
+}
+
+.gsc-comment-author {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  color: #1c1a17;
+}
+
+.gsc-comment-content {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 16px;
+  color: #1c1a17;
+  line-height: 1.8;
+}
+
+.gsc-reply {
+  border: 1px solid var(--color-border-default);
+  border-radius: 2px;
+}
+
+.gsc-left-header {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  color: #6b6459;
+  font-size: 0.85rem;
+}
+
+.link-secondary {
+  color: #6b6459 !important;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+}
+
+.link-secondary:hover {
+  color: #7a3228 !important;
+}
+
+.gsc-social-reaction-summary-item {
+  border: 1px solid var(--color-border-default);
+  border-radius: 2px;
+  background: var(--color-canvas-subtle);
+  font-family: 'EB Garamond', Georgia, serif;
+}
+
+.gsc-pagination .btn {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  color: #6b6459;
+  border-color: #d4c9b8;
+}
+
+.gsc-loading {
+  color: #b0a898;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+}
+
+.gsc-loading::after {
+  content: ' per somnia…';
+}
