@@ -195,3 +195,29 @@ body {
 .gsc-loading::after {
   content: ' per somnia…';
 }
+
+.gsc-loading-image {
+  display: none !important;
+}
+
+.gsc-loading {
+  color: #b0a898;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+}
+
+.gsc-loading::after {
+  content: 'per somnia…';
+  animation: fadeloop 2s ease-in-out infinite;
+}
+
+@keyframes fadeloop {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
