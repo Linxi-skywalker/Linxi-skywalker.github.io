@@ -1,0 +1,235 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+const allPosts = (await getCollection('blog')).sort((a, b) => {
+  if (a.data.pinned && !b.data.pinned) return -1;
+  if (!a.data.pinned && b.data.pinned) return 1;
+  return new Date(b.data.date).getTime() - new Date(a.data.date).getTime();
+});
+
+const postsPerPage = 10;
+const pageParam = Astro.url.searchParams.get('page') || '1';
+const currentPage = Math.max(1, parseInt(pageParam));
+const totalPages = Math.ceil(allPosts.length / postsPerPage);
+const startIndex = (currentPage - 1) * postsPerPage;
+const posts = allPosts.slice(startIndex, startIndex + postsPerPage);
+---
+<Base title="Somnia">
+<style is:global>
+  .hero { padding: 3.5rem 0 2.5rem; border-bottom: 1px solid var(--rule); }
+  .hero-eyebrow { font-size: 0.75rem; letter-spacing: 0.18em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 1.2rem; }
+  .hero-title { font-size: 3.8rem; font-style: italic; font-weight: 400; line-height: 1.1; margin-bottom: 0.4rem; }
+  .hero-sub { font-size: 0.95rem; color: var(--ink-muted); letter-spacing: 0.05em; margin-bottom: 2rem; margin-top: 0; }
+  .typewriter-row { display: flex; align-items: center; border-bottom: 1px solid var(--ink-muted); padding-bottom: 4px; max-width: 480px; }
+  .tw-prefix { font-size: 0.88rem; color: var(--ink-faint); white-space: nowrap; margin-right: 6px; font-style: italic; }
+  #tw { font-size: 1rem; color: var(--accent); font-style: italic; min-width: 2px; }
+  .tw-cursor { width: 1px; height: 1.1em; background: var(--accent); display: inline-block; animation: blink 1s step-end infinite; flex-shrink: 0; margin-left: 1px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .home-grid { display: grid; grid-template-columns: 1fr 200px; }
+  @media (max-width: 640px) { .home-grid { grid-template-columns: 1fr; } .home-sidebar { display: none; } }
+
+  .home-main { padding: 2.5rem 2rem 3rem 0; border-right: 1px solid var(--rule); }
+  .home-sidebar { padding: 2.5rem 0 2rem 1.8rem; }
+
+  .post-row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.85rem 0; border-bottom: 1px solid var(--rule); text-decoration: none; color: inherit; transition: padding-left 0.2s; }
+  .post-row:first-of-type { border-top: 1px solid var(--rule); }
+  .post-row:hover { padding-left: 0.5rem; }
+  .post-row-title { font-size: 1rem; font-style: italic; }
+  .post-row-right { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; margin-left: 1rem; }
+  .post-row-date { font-size: 0.78rem; color: var(--ink-faint); }
+  .pin-mark { font-size: 0.65rem; color: var(--ink-faint); margin-right: 3px; }
+
+  .sb-section { margin-bottom: 2rem; }
+  .sb-label { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.8rem; display: block; }
+  .sb-tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sb-tag { font-size: 0.73rem; padding: 2px 9px; border: 1px solid var(--rule); border-radius: 2px; color: var(--ink-muted); font-style: italic; background: none; font-family: inherit; transition: all 0.15s; cursor: pointer; }
+  .sb-tag:hover, .sb-tag.active { border-color: var(--accent); color: var(--accent); }
+  .sb-archive { list-style: none; }
+  .sb-archive li { font-size: 0.82rem; color: var(--ink-muted); padding: 3px 0; font-style: italic; }
+  .sb-archive span { color: var(--ink-faint); }
+  .legend-row { font-size: 0.78rem; color: var(--ink-muted); line-height: 2.2; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; opacity: 0.8; }
+  .dot-lucid { background: var(--lucid); }
+  .dot-drift  { background: var(--drift); }
+
+  .about-strip { padding: 1.4rem 0; border-top: 1px solid var(--rule); display: flex; align-items: baseline; justify-content: space-between; }
+  .about-quote { font-size: 0.9rem; font-style: italic; color: var(--ink-muted); }
+  .about-link { font-size: 0.78rem; color: var(--ink-faint); letter-spacing: 0.05em; text-decoration: none; transition: color 0.2s; }
+  .about-link:hover { color: var(--accent); }
+  
+  .page-link {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink-muted);
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .page-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  
+  .category-nav { display: flex; gap: 1.2rem; padding: 1.5rem 0; border-bottom: 1px solid var(--rule); margin-bottom: 0; font-size: 0.95rem; position: relative; }
+  .category-btn { background: none; border: none; color: var(--ink-muted); font-style: italic; cursor: pointer; font-family: inherit; font-size: 0.95rem; padding: 0.5rem 0; transition: color 0.2s; position: relative; }
+  .category-btn:hover, .category-btn.active { color: var(--accent); }
+  .category-btn.active { border-bottom: 1px solid var(--accent); }
+</style>
+
+<div class="hero">
+  <div class="hero-eyebrow">per somnia · through dreams</div>
+  <h1 class="hero-title">Somnia</h1>
+  <p class="hero-sub">Linxi &middot; writing, code, and the edges of things</p>
+  <div class="typewriter-row">
+    <span class="tw-prefix">today I'm thinking —</span>
+    <span id="tw"></span>
+    <span class="tw-cursor"></span>
+  </div>
+</div>
+
+<div class="category-nav">
+  <button class="category-btn active" onclick="filterCategory(this,'all')">all</button>
+  <button class="category-btn" onclick="filterCategory(this,'lucid')">lucid</button>
+  <button class="category-btn" onclick="filterCategory(this,'drift')">drift</button>
+</div>
+
+<div class="home-grid">
+  <div class="home-main">
+    {posts.map(post => {
+      const slug = post.id.replace(/\.md$/, '');
+      return (
+        <a href={'/memoria/' + slug} class="post-row" data-category={post.data.category}>
+          <span class="post-row-title">
+            {post.data.pinned && <span class="pin-mark">✦</span>}
+            {post.data.title}
+          </span>
+          <span class="post-row-right">
+            <span class={'tag ' + post.data.category}>{post.data.tags[0] ?? post.data.category}</span>
+            <span class="post-row-date">{post.data.date.slice(0,7).replace('-','·')}</span>
+          </span>
+        </a>
+      );
+    })}
+  </div>
+
+  <div class="home-sidebar">
+    <div class="sb-section">
+      <span class="sb-label">legend</span>
+      <div class="legend-row">
+        <span class="dot dot-lucid"></span>
+        <span style="color:var(--lucid);font-style:italic">lucid</span> — 清醒时造的物<br>
+        <span class="dot dot-drift"></span>
+        <span style="color:var(--drift);font-style:italic">drift</span> — 漂流时看见的
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <span class="sb-label">标签</span>
+      <div class="sb-tag-list" id="home-tags-tags">
+        <button class="sb-tag" onclick="filterTag(this,'随笔')">随笔</button>
+        <button class="sb-tag" onclick="filterTag(this,'音乐')">音乐</button>
+        <button class="sb-tag" onclick="filterTag(this,'电影')">电影</button>
+        <button class="sb-tag" onclick="filterTag(this,'诗')">诗</button>
+        <button class="sb-tag" onclick="filterTag(this,'阅读')">阅读</button>
+        <button class="sb-tag" onclick="filterTag(this,'代码')">代码</button>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <span class="sb-label">归档</span>
+      <ul class="sb-archive">
+        <li>2026 <span>· {posts.filter(p => p.data.date.startsWith('2026')).length} 篇</span></li>
+      </ul>
+    </div>
+
+    <div class="sb-section">
+      <span class="sb-label">正在</span>
+      <p style="font-size:0.8rem;color:var(--ink-muted);font-style:italic;line-height:1.9;margin-top:0">
+        读 · 《不能承受的生命之轻》<br>
+        听 · luther<br>
+        看 · 《挽救计划》
+      </p>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;justify-content:center;padding:2rem 0 1rem 0;gap:0.5rem" id="pagination">
+  {Array.from({length: totalPages}, (_, i) => i + 1).map(page => (
+    <a href={page === 1 ? '/' : `/?page=${page}`} class="page-link" data-page={page} style={`opacity: ${page === currentPage ? '1' : '0.5'}`}>
+      {page}
+    </a>
+  ))}
+</div>
+
+<div class="about-strip">
+  <span class="about-quote">"不要温和地走进那个良夜"</span>
+  <a href="/about" class="about-link">关于 Linxi →</a>
+</div>
+
+<script>
+var currentCategory = 'all';
+var currentTag = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+  function filterCategory(btn, cat) {
+    document.querySelectorAll('.category-btn').forEach(function(t){ t.classList.remove('active'); });
+    btn.classList.add('active');
+    currentCategory = cat;
+    applyFilters();
+  }
+
+  function filterTag(btn, tag) {
+    if (btn.classList.contains('active')) {
+      btn.classList.remove('active');
+      currentTag = '';
+    } else {
+      document.querySelectorAll('#home-tags-tags .sb-tag').forEach(function(t){ t.classList.remove('active'); });
+      btn.classList.add('active');
+      currentTag = tag;
+    }
+    applyFilters();
+  }
+
+  function applyFilters() {
+    document.querySelectorAll('.post-row').forEach(function(row) {
+      var catEl = row.getAttribute('data-category');
+      var tagEl = row.querySelector('.tag');
+      var catMatch = (currentCategory === 'all') || (catEl === currentCategory);
+      var tagMatch = !currentTag || (tagEl && tagEl.textContent.trim() === currentTag);
+      row.style.display = (catMatch && tagMatch) ? 'flex' : 'none';
+    });
+  }
+
+  window.filterCategory = filterCategory;
+  window.filterTag = filterTag;
+});
+
+var phrases = [
+  "do not go gentle into that good night",
+  "梦是清醒时最诚实的部分",
+  "every word is a small act of survival",
+  "in dreams begins responsibility",
+  "代码和诗歌都是对混乱的抵抗"
+];
+var pi = 0, ci = 0, deleting = false, paused = false;
+var el = document.getElementById('tw');
+function type() {
+  if (paused) return setTimeout(type, 1800);
+  var w = phrases[pi];
+  if (!deleting) {
+    el.textContent = w.slice(0, ci + 1); ci++;
+    if (ci === w.length) { deleting = true; paused = true; setTimeout(function(){ paused = false; }, 2400); }
+    setTimeout(type, 70);
+  } else {
+    el.textContent = w.slice(0, ci - 1); ci--;
+    if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; setTimeout(type, 400); }
+    else setTimeout(type, 38);
+  }
+}
+type();
+</script>
+</Base>

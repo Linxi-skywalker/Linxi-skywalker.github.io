@@ -1,0 +1,103 @@
+---
+import '../styles/global.css';
+const { title = 'Somnia' } = Astro.props;
+const pageTitle = title === 'Somnia' ? 'Somnia' : title + ' — Somnia';
+---
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="generator" content={Astro.generator} />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet" />
+  <title>{pageTitle}</title>
+</head>
+<body>
+  <header id="site-header">
+    <a href="/" class="header-logo">Somnia</a>
+    <nav class="site-nav">
+      <a href="/">home</a>
+      <a href="/archive">archive</a>
+      <a href="/about">about</a>
+    </nav>
+  </header>
+  <div class="header-spacer"></div>
+  <main class="site-main">
+    <slot />
+  </main>
+  <footer class="site-footer">
+    <hr />
+    <p>Linxi &middot; {new Date().getFullYear()} &middot; <em>per somnia</em></p>
+  </footer>
+  <canvas id="cursor-canvas"></canvas>
+  <script>
+    var header = document.getElementById('site-header');
+    window.addEventListener('scroll', function() {
+      header.classList.toggle('scrolled', window.scrollY > 10);
+    });
+    var canvas = document.getElementById('cursor-canvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    window.addEventListener('resize', function() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+    var trails = [];
+    var lastX = 0, lastY = 0;
+    window.addEventListener('mousemove', function(e) {
+      var dx = e.clientX - lastX;
+      var dy = e.clientY - lastY;
+      var dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 3) return;
+      var angle = Math.atan2(dy, dx);
+      for (var i = 0; i < 3; i++) {
+        trails.push({
+          x: e.clientX + (Math.random()-0.5)*3,
+          y: e.clientY + (Math.random()-0.5)*3,
+          vx: (Math.random()-0.5)*0.3,
+          vy: (Math.random()-0.5)*0.3 + 0.25,
+          life: 1,
+          decay: 0.018 + Math.random()*0.014,
+          size: 1.0 + Math.random()*1.6,
+          angle: angle
+        });
+      }
+      lastX = e.clientX; lastY = e.clientY;
+      if (trails.length > 150) trails.splice(0, trails.length - 150);
+    });
+    function drawMark(p) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle + Math.PI/4);
+      ctx.globalAlpha = p.life * 0.42;
+      ctx.strokeStyle = '#7a3228';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = p.size * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -p.size*1.4);
+      ctx.quadraticCurveTo(p.size*0.4, 0, 0, p.size*1.4);
+      ctx.stroke();
+      ctx.globalAlpha = p.life * 0.15;
+      ctx.lineWidth = p.size * 0.18;
+      ctx.beginPath();
+      ctx.moveTo(0, -p.size*0.9);
+      ctx.quadraticCurveTo(p.size*0.7, 0, 0, p.size*0.9);
+      ctx.stroke();
+      ctx.restore();
+    }
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (var i = trails.length-1; i >= 0; i--) {
+        var t = trails[i];
+        t.x += t.vx; t.y += t.vy;
+        t.life -= t.decay; t.size *= 0.975;
+        if (t.life <= 0) { trails.splice(i,1); continue; }
+        drawMark(t);
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+</body>
+</html>

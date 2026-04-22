@@ -1,0 +1,180 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:       #f4efe6;
+  --paper-dark:  #ede6d9;
+  --ink:         #1c1a17;
+  --ink-muted:   #6b6459;
+  --ink-faint:   #b0a898;
+  --accent:      #7a3228;
+  --lucid:       #2a4a7a;
+  --lucid-light: #a8bcd4;
+  --drift:       #7a3228;
+  --drift-light: #d4b8b8;
+  --rule:        #d4c9b8;
+}
+
+html { background: var(--paper); color: var(--ink); }
+
+body {
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 19px;
+  line-height: 1.8;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--rule);
+  transition: color 0.2s, text-decoration-color 0.2s;
+}
+a:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+h1 { font-size: 2.2rem; font-weight: 500; line-height: 1.2; }
+h2 { font-size: 1.5rem; font-weight: 500; margin-top: 2.5rem; }
+h3 { font-size: 1.15rem; font-weight: 500; margin-top: 2rem; }
+p  { margin-top: 1.2rem; }
+hr { border: none; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
+
+/* ── header ── */
+#site-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: flex-start;  
+  align-items: baseline;
+  padding: 1.1rem 0;            
+  max-width: 900px;             
+  margin: 0 auto;           
+  background: rgba(244,239,230,0.93);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  transition: box-shadow 0.3s;
+  padding-left: 1.5rem;         
+  padding-right: 1.5rem;
+}
+
+#site-header.scrolled { box-shadow: 0 2px 16px rgba(28,26,23,0.07); }
+
+.header-logo {
+  position: absolute;
+  left: 2rem;
+  font-size: 0.92rem;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.header-logo:hover { color: var(--accent); }
+
+.site-nav {
+  display: flex;
+  gap: 2.4rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  margin-left: auto;  
+}
+
+.site-nav a {
+  text-decoration: none;
+  color: var(--ink-muted);
+  font-style: italic;
+  transition: color 0.2s;
+  position: relative;
+}
+.site-nav a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 0; right: 0;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.2s;
+}
+.site-nav a:hover { color: var(--accent); }
+.site-nav a:hover::after { transform: scaleX(1); }
+
+.header-spacer { height: 85px; }
+
+.site-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.site-footer {
+  max-width: 900px;
+  margin: 4rem auto 0;
+  padding: 0 1.5rem 3rem;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.site-footer hr { margin-bottom: 1rem; }
+.site-footer p { margin-top: 0; }
+
+/* ── cursor canvas ── */
+#cursor-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── tag pill ── */
+.tag {
+  font-size: 0.7rem;
+  padding: 1px 8px;
+  border-radius: 2px;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--rule);
+  color: var(--ink-muted);
+}
+.tag.lucid { border-color: var(--lucid-light); color: var(--lucid); }
+.tag.drift  { border-color: var(--drift-light); color: var(--drift); }
+
+/* ── prose ── */
+.prose { max-width: 660px; }
+.prose p { margin-top: 1.3rem; }
+.prose h2 { margin-top: 2.5rem; margin-bottom: 0.5rem; }
+.prose h3 { margin-top: 2rem; margin-bottom: 0.4rem; }
+.prose blockquote {
+  border-left: 2px solid var(--rule);
+  padding-left: 1.2rem;
+  color: var(--ink-muted);
+  font-style: italic;
+  margin: 1.8rem 0;
+}
+.prose code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.85em;
+  background: var(--paper-dark);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.prose pre {
+  background: var(--paper-dark);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.2rem 1.4rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+.prose pre code { background: none; padding: 0; }
+.prose ul, .prose ol { margin-top: 1rem; padding-left: 1.5rem; }
+.prose li { margin-top: 0.3rem; }
+
+/* ── responsive ── */
+@media (max-width: 520px) {
+  body { font-size: 17px; }
+  .header-logo { display: none; }
+  #site-header { justify-content: center; }
+}

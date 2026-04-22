@@ -1,0 +1,153 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+const PAGE_SIZE = 8;
+const page = Number(Astro.url.searchParams.get('page') ?? 1);
+
+const allPosts = (await getCollection('blog')).sort((a, b) => {
+  if (a.data.pinned && !b.data.pinned) return -1;
+  if (!a.data.pinned && b.data.pinned) return 1;
+  return new Date(b.data.date).getTime() - new Date(a.data.date).getTime();
+});
+
+const totalPages = Math.ceil(allPosts.length / PAGE_SIZE);
+const posts = allPosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+const allTags = [...new Set(allPosts.flatMap(p => p.data.tags))];
+---
+<Base title="Blog">
+<style is:global>
+  .blog-wrap { display: grid; grid-template-columns: 1fr 200px; padding-top: 3rem; }
+  @media (max-width: 640px) { .blog-wrap { grid-template-columns: 1fr; } .blog-sb { display: none; } }
+
+  .blog-main { padding-right: 2.5rem; border-right: 1px solid var(--rule); }
+  .blog-sb { padding-left: 1.8rem; }
+
+  .blog-hd { margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
+  .blog-hd h1 { font-size: 2.2rem; font-style: italic; font-weight: 400; }
+  .blog-hd p { font-size: 0.82rem; color: var(--ink-faint); font-style: italic; margin-top: 0.3rem; margin-bottom: 0; }
+
+  .filter-tabs { display: flex; margin-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
+  .ftab { font-size: 0.88rem; padding: 0.4rem 0; margin-right: 2rem; color: var(--ink-faint); border: none; border-bottom: 2px solid transparent; background: none; font-family: inherit; font-style: italic; cursor: pointer; transition: all 0.2s; letter-spacing: 0.03em; }
+  .ftab:hover { color: var(--ink-muted); }
+  .ftab.active-all   { color: var(--ink);   border-bottom-color: var(--ink); }
+  .ftab.active-lucid { color: var(--lucid); border-bottom-color: var(--lucid); }
+  .ftab.active-drift { color: var(--drift); border-bottom-color: var(--drift); }
+
+  .post-item { display: block; padding: 1.1rem 0; border-bottom: 1px solid var(--rule); text-decoration: none; color: inherit; transition: padding-left 0.2s; }
+  .post-item:first-of-type { border-top: 1px solid var(--rule); }
+  .post-item:hover { padding-left: 0.5rem; }
+  .pi-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .pi-title { font-size: 1rem; font-style: italic; }
+  .pi-meta { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; margin-left: 1rem; }
+  .pi-date { font-size: 0.78rem; color: var(--ink-faint); }
+  .pi-desc { font-size: 0.82rem; color: var(--ink-muted); margin-top: 0.25rem; line-height: 1.5; }
+  .pin-mark { font-size: 0.68rem; color: var(--ink-faint); margin-right: 3px; }
+
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 0.8rem; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+  .pgbtn { font-size: 0.82rem; font-style: italic; color: var(--ink-muted); text-decoration: none; padding: 0.2rem 0.7rem; border: 1px solid var(--rule); border-radius: 2px; transition: all 0.2s; }
+  .pgbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .pgbtn.cur { color: var(--ink); border-color: var(--ink-muted); }
+  .pgbtn.off { color: var(--ink-faint); pointer-events: none; opacity: 0.4; }
+
+  .sb-section { margin-bottom: 2rem; }
+  .sb-label { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.8rem; display: block; }
+  .sb-tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sb-tag { font-size: 0.73rem; padding: 2px 9px; border: 1px solid var(--rule); border-radius: 2px; color: var(--ink-muted); font-style: italic; background: none; font-family: inherit; transition: all 0.15s; cursor: pointer; }
+  .sb-tag:hover, .sb-tag.active { border-color: var(--accent); color: var(--accent); }
+  .legend-row { font-size: 0.78rem; color: var(--ink-muted); line-height: 2.2; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; opacity: 0.8; }
+  .dot-lucid { background: var(--lucid); }
+  .dot-drift  { background: var(--drift); }
+</style>
+
+<div class="blog-wrap">
+  <div class="blog-main">
+    <div class="blog-hd">
+      <h1>Blog</h1>
+      <p>lucid and drift — {allPosts.length} entries</p>
+    </div>
+
+    <div class="filter-tabs">
+      <button class="ftab active-all" data-cat="all" onclick="setFilter(this)">all</button>
+      <button class="ftab" data-cat="lucid" onclick="setFilter(this)">lucid</button>
+      <button class="ftab" data-cat="drift" onclick="setFilter(this)">drift</button>
+    </div>
+
+    {posts.map(post => {
+      const slug = post.id.replace(/\.md$/, '');
+      return (
+        <a href={'/memoria/' + slug} class="post-item" data-cat={post.data.category} data-tags={post.data.tags.join(',')}>
+          <div class="pi-top">
+            <span class="pi-title">
+              {post.data.pinned && <span class="pin-mark">✦</span>}
+              {post.data.title}
+            </span>
+            <span class="pi-meta">
+              <span class={'tag ' + post.data.category}>{post.data.tags[0] ?? post.data.category}</span>
+              <span class="pi-date">{post.data.date.slice(0,7).replace('-','·')}</span>
+            </span>
+          </div>
+          {post.data.description && <p class="pi-desc">{post.data.description}</p>}
+        </a>
+      );
+    })}
+
+    {totalPages > 1 && (
+      <div class="pagination">
+        {page > 1
+          ? <a href={'?page=' + (page-1)} class="pgbtn">← prev</a>
+          : <span class="pgbtn off">← prev</span>}
+        {Array.from({length: totalPages}, (_, i) => i+1).map(n => (
+          <a href={'?page=' + n} class={'pgbtn' + (n === page ? ' cur' : '')}>{n}</a>
+        ))}
+        {page < totalPages
+          ? <a href={'?page=' + (page+1)} class="pgbtn">next →</a>
+          : <span class="pgbtn off">next →</span>}
+      </div>
+    )}
+  </div>
+
+  <div class="blog-sb">
+    <div class="sb-section">
+      <span class="sb-label">legend</span>
+      <div class="legend-row">
+        <span class="dot dot-lucid"></span>
+        <span style="color:var(--lucid);font-style:italic">lucid</span> — 清醒时造的物<br>
+        <span class="dot dot-drift"></span>
+        <span style="color:var(--drift);font-style:italic">drift</span> — 漂流时看见的
+      </div>
+    </div>
+    <div class="sb-section">
+      <span class="sb-label">标签</span>
+      <div class="sb-tag-list">
+        <button class="sb-tag active" onclick="filterByTag(this,'')">全部</button>
+        {allTags.map(tag => (
+          <button class="sb-tag" onclick={'filterByTag(this,\'' + tag + '\')'}>{tag}</button>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setFilter(btn) {
+  var cat = btn.dataset.cat;
+  document.querySelectorAll('.ftab').forEach(function(t){ t.className = 'ftab'; });
+  btn.classList.add('active-' + cat);
+  document.querySelectorAll('.post-item').forEach(function(r) {
+    r.style.display = (cat === 'all' || r.dataset.cat === cat) ? 'block' : 'none';
+  });
+}
+function filterByTag(btn, tag) {
+  document.querySelectorAll('.sb-tag').forEach(function(t){ t.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.post-item').forEach(function(r) {
+    if (!tag) { r.style.display = 'block'; return; }
+    var tags = (r.dataset.tags || '').split(',');
+    r.style.display = tags.indexOf(tag) !== -1 ? 'block' : 'none';
+  });
+}
+</script>
+</Base>

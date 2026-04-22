@@ -1,0 +1,97 @@
+---
+
+import Base from '../../layouts/Base.astro';
+import Giscus from '../../components/Giscus.astro';
+import { getCollection, render } from 'astro:content';
+
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map(post => ({
+    params: { slug: post.id.replace(/\.md$/, '') },
+    props: { post }
+  }));
+}
+
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+
+
+---
+<Base title={post.data.title}>
+<style is:global>
+  .art-wrap { display: grid; grid-template-columns: 1fr 200px; padding-top: 3rem; }
+  @media (max-width: 640px) { .art-wrap { grid-template-columns: 1fr; } .art-sb { display: none; } }
+
+  .art-main { padding-right: 2.5rem; border-right: 1px solid var(--rule); min-width: 0; }
+  .art-sb { padding-left: 1.8rem; }
+
+  .art-hd { margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
+  .art-cat { font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 0.8rem; }
+  .art-cat.lucid { color: var(--lucid); }
+  .art-cat.drift  { color: var(--drift); }
+  .art-h1 { font-size: 2.2rem; font-style: italic; font-weight: 400; line-height: 1.25; margin-bottom: 0.5rem; }
+  .art-desc { font-size: 1rem; color: var(--ink-muted); font-style: italic; margin-top: 0.3rem; margin-bottom: 0.8rem; }
+  .art-meta { font-size: 0.82rem; color: var(--ink-faint); font-style: italic; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  .art-tags { display: flex; gap: 6px; }
+
+  .sb-label { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.8rem; display: block; }
+  .sb-section { margin-bottom: 2rem; }
+  .toc-list { list-style: none; }
+  .toc-item { padding: 3px 0 3px 0.8rem; border-left: 1px solid var(--rule); font-size: 0.8rem; color: var(--ink-muted); font-style: italic; line-height: 1.4; transition: border-color 0.15s; }
+  .toc-item a { text-decoration: none; color: inherit; display: block; transition: color 0.15s; }
+  .toc-item a:hover { color: var(--accent); }
+  .toc-item.h3 { padding-left: 1.4rem; font-size: 0.75rem; }
+
+  .back-link { display: inline-block; font-size: 0.82rem; color: var(--ink-faint); font-style: italic; text-decoration: none; margin-top: 3rem; transition: color 0.2s; }
+  .back-link:hover { color: var(--accent); }
+</style>
+
+<div class="art-wrap">
+  <article class="art-main">
+    <header class="art-hd">
+      <div class={'art-cat ' + post.data.category}>{post.data.category}</div>
+      <h1 class="art-h1">{post.data.title}</h1>
+      {post.data.description && <p class="art-desc">{post.data.description}</p>}
+      <div class="art-meta">
+        <span>{post.data.date}</span>
+        <div class="art-tags">
+          {post.data.tags.map(tag => (
+            <span class={'tag ' + post.data.category}>{tag}</span>
+          ))}
+        </div>
+      </div>
+    </header>
+    <div class="prose">
+      <Content />
+    </div>
+    <Giscus path={'/memoria/' + post.id.replace(/\.md$/, '')} />
+    <a href="javascript:history.back()" class="back-link">← back</a>
+  </article>
+
+  <aside class="art-sb">
+    {headings.length > 0 && (
+      <div class="sb-section">
+        <span class="sb-label">目录</span>
+        <ul class="toc-list">
+          {headings.map(h => (
+            <li class={'toc-item' + (h.depth === 3 ? ' h3' : '')}>
+              <a href={'#' + h.slug}>{h.text}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {post.data.tags.length > 0 && (
+      <div class="sb-section">
+        <span class="sb-label">标签</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          {post.data.tags.map(tag => (
+            <span class={'tag ' + post.data.category}>{tag}</span>
+          ))}
+        </div>
+      </div>
+    )}
+  </aside>
+</div>
+</Base>
