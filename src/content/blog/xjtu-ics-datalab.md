@@ -2,7 +2,7 @@
 title: xjtu-ics-datalab
 date: "2026-03-14"
 category: lucid
-tags: [代码, xjtu-ics]
+tags: [xjtu-ics, 代码]
 description: 天，0和1让我头晕。但我感觉可真好。
 pinned: false
 ---
