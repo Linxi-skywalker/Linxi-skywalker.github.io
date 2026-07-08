@@ -24,7 +24,7 @@ const { Content, headings } = await render(post);
   @media (max-width: 640px) { .art-wrap { grid-template-columns: 1fr; } .art-sb { display: none; } }
 
   .art-main { padding-right: 2.5rem; border-right: 1px solid var(--rule); min-width: 0; }
-  .art-sb { padding-left: 1.8rem; }
+  .art-sb { padding-left: 1.8rem; position: sticky; top: 2rem; align-self: start; height: fit-content; }
 
   .art-hd { margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
   .art-cat { font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 0.8rem; }
