@@ -105,7 +105,7 @@ const posts = allPosts.slice(startIndex, startIndex + postsPerPage);
     {posts.map(post => {
       const slug = post.id.replace(/\.md$/, '');
       return (
-        <a href={'/memoria/' + slug} class="post-row" data-category={post.data.category}>
+        <a href={'/memoria/' + slug} class="post-row" data-category={post.data.category} data-tags={post.data.tags.join(',')}>
           <span class="post-row-title">
             {post.data.pinned && <span class="pin-mark">✦</span>}
             {post.data.title}
@@ -201,9 +201,10 @@ document.addEventListener('DOMContentLoaded', function() {
   function applyFilters() {
     document.querySelectorAll('.post-row').forEach(function(row) {
       var catEl = row.getAttribute('data-category');
-      var tagEl = row.querySelector('.tag');
+      var tagsStr = row.getAttribute('data-tags');
+      var tags = tagsStr ? tagsStr.split(',') : [];
       var catMatch = (currentCategory === 'all') || (catEl === currentCategory);
-      var tagMatch = !currentTag || (tagEl && tagEl.textContent.trim() === currentTag);
+      var tagMatch = !currentTag || tags.indexOf(currentTag) !== -1;
       row.style.display = (catMatch && tagMatch) ? 'flex' : 'none';
     });
   }
