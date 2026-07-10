@@ -46,7 +46,7 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
   justify-content: flex-start;  
   align-items: baseline;
   padding: 1.1rem 0;            
-  max-width: 1180px;             
+  max-width: 900px;             
   margin: 0 auto;           
   background: rgba(244,239,230,0.93);
   backdrop-filter: blur(8px);
@@ -101,13 +101,13 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
 .header-spacer { height: 85px; }
 
 .site-main {
-  max-width: 1180px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
 
 .site-footer {
-  max-width: 1180px;
+  max-width: 900px;
   margin: 4rem auto 0;
   padding: 0 1.5rem 3rem;
   font-size: 0.85rem;
@@ -140,7 +140,7 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
 .tag.drift  { border-color: var(--drift-light); color: var(--drift); }
 
 /* ── prose ── */
-.prose { max-width: 760px; }
+.prose { max-width: 660px; }
 .prose p { margin-top: 1.3rem; }
 .prose h2 { margin-top: 2.5rem; margin-bottom: 0.5rem; }
 .prose h3 { margin-top: 2rem; margin-bottom: 0.4rem; }
