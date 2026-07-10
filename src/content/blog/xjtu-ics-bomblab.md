@@ -7,7 +7,7 @@ description: 这个世界的运行方式就是这样：一次走一步，说一�
 pinned: false
 ---
 
-# XJTU-ICS Lab1：Bomb Lab
+# XJTU-ICS Lab2：Bomb Lab
 
 > 💡 **写在前面（一点碎碎念）：**
 > 本文记录的解法，**绝非唯一答案，更不代表最优解**（~~另外文章当中还可能存在未被发现的bug🪲~~）。
