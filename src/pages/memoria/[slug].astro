@@ -20,6 +20,7 @@ const { Content, headings } = await render(post);
 ---
 <Base title={post.data.title}>
 <style is:global>
+  .site-main { max-width: 1180px; }
   .art-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 220px; padding-top: 3rem; max-width: 1180px; margin: 0 auto; }
   @media (max-width: 640px) { .art-wrap { grid-template-columns: 1fr; } .art-sb { display: none; } }
 
