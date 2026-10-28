@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F7F8FC">
+  <meta name="description" content="亲手探索 SGD、Momentum、Adam 与 RMSprop 在 Himmelblau 损失地形中的下降路径。">
+  <title>沿着梯度，寻找谷底 · Optimizer Atlas</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="vendor/plotly-3.1.0.min.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#lab">跳到交互实验</a>
+  <header class="site-header">
+    <a class="brand" href="#top"><span class="brand-mark">∇</span><span>梯度图志 <small>OPTIMIZER ATLAS</small></span></a>
+    <nav aria-label="页面导航"><a href="#lab">探索地形</a><a href="#experiments">动手实验</a><a href="#methods">理解算法</a></nav>
+    <a class="header-action" href="#lab">打开实验室 <span>↗</span></a>
+  </header>
+  <main id="top">
+    <section class="intro page-width">
+      <div class="intro-copy">
+        <div class="eyebrow">OPTIMIZER ATLAS</div>
+        <h1>同一片地形，<br>四种<span class="headline-emphasis">下山方式。</span></h1>
+        <p>从同一个起点出发，看梯度、惯性与自适应步幅，<br class="desktop-break">如何画出不同的旅程。</p>
+        <div class="intro-actions"><a href="#lab" class="primary-link">开始探索 <span>↓</span></a><a href="#methods">先了解四种算法 <span>↗</span></a></div>
+      </div>
+      <aside class="formula-note" aria-label="Himmelblau 损失函数">
+        <span class="small-label">题目默认地形 / THE LANDSCAPE</span>
+        <h2>Himmelblau <span>landscape</span></h2>
+        <div class="hero-formula">L(w₁,w₂) = (w₁² + w₂ − 11)²<br><span>+ (w₁ + w₂² − 7)²</span></div>
+        <div class="formula-meta"><span>二维参数</span><span>四个谷底</span><span>L ≥ 0</span></div>
+      </aside>
+    </section>
+
+    <section id="lab" class="laboratory page-width" aria-labelledby="lab-title">
+      <div class="section-heading lab-heading"><div><span class="chapter">探索</span><h2 id="lab-title">让路径自己说话。</h2></div><span class="live-label"><span></span> 实时计算 · 自由探索</span></div>
+      <form id="function-form" class="function-editor">
+        <div class="function-heading"><div><label for="function-expression">写一片自己的地形</label><span id="function-status" role="status">当前：Himmelblau</span></div><select id="function-preset" aria-label="函数示例"><option value="himmelblau">示例 · Himmelblau</option><option value="bowl">示例 · 椭圆碗</option><option value="rosenbrock">示例 · Rosenbrock</option><option value="ripples">示例 · 波纹地形</option><option value="custom">自由输入</option></select></div>
+        <div class="formula-display"><span class="formula-display-label">公式预览</span><div class="formula-math"><span>L(x, y) =</span><span id="formula-preview" aria-live="polite"></span></div></div>
+        <div class="function-input-row"><label class="edit-label" for="function-expression">编辑表达式</label><textarea id="function-expression" aria-label="损失函数表达式" aria-describedby="function-help function-error" rows="1" maxlength="320" spellcheck="false" autocapitalize="off">(x^2+y-11)^2+(x+y^2-7)^2</textarea><button id="apply-function" class="function-apply" type="submit">应用函数 <span aria-hidden="true">↗</span></button></div>
+        <div class="function-footer"><p id="function-help">变量 x、y（也支持 w1、w2） · + − * / ^ · sin、cos、tan、exp、log、ln、sqrt、tanh · pi、e<br>范围 [−5, 5]²；请使用光滑函数。改好后点击应用，或按 Ctrl / ⌘ + Enter。</p><button id="restore-function" type="button">恢复题目函数</button></div><p id="function-error" class="error-message" role="alert" hidden></p>
+      </form>
+      <div class="lab-shell">
+        <div id="scene-view" class="scene-column">
+          <div class="canvas-header">
+            <div class="style-tabs" aria-label="曲面样式"><button id="style-mist" class="selected" aria-pressed="true"><span class="style-swatch mist"></span>雾蓝地形</button><button id="style-science" aria-pressed="false"><span class="style-swatch spectrum"></span>科学曲面</button></div>
+            <div class="view-tabs" aria-label="相机角度"><button id="view-3d" class="selected" aria-pressed="true">立体地形</button><button id="view-top" aria-pressed="false">俯视路径</button></div>
+            <button id="expand-scene" class="expand-button" aria-haspopup="dialog" aria-label="大图查看">全屏 <span>↗</span></button>
+          </div>
+          <div class="optimizer-picker"><select id="optimizer-select" aria-label="选择优化器"><option value="all">全部对比</option><option value="SGD">只看 SGD</option><option value="Momentum">只看 Momentum</option><option value="Adam">只看 Adam</option><option value="RMSprop">只看 RMSprop</option><option value="custom" disabled>自选组合</option></select><div id="legend" class="optimizer-legend" aria-label="优化器路径显示开关"></div></div>
+          <details id="view-options" class="view-options"><summary><span class="settings-icon" aria-hidden="true">☷</span> 显示设置 <span class="settings-summary">图层、范围与侧视片段</span><span class="disclosure-arrow">⌄</span></summary><div class="view-options-body">
+            <div class="display-switches"><label><input id="show-trails" type="checkbox" checked><span>轨迹</span></label><label><input id="show-minima" type="checkbox" checked><span>全局最小值</span></label><label title="当前步的实际更新方向，箭头长度统一，不表示真实步长"><input id="show-arrows" type="checkbox"><span>方向箭头</span></label><label><input id="path-samples" type="checkbox"><span>逐步点位</span></label></div>
+            <div class="view-fields"><label>当前位置<select id="marker-mode" aria-label="当前位置样式"><option value="ball">立体小球</option><option value="point">简洁点位</option></select></label><label>侧视片段<select id="study-target" aria-label="选择侧视片段"><option value="hover">随鼠标</option><option value="A">A 附近路径</option><option value="B">B 附近路径</option><option value="C">C 附近路径</option><option value="D">D 附近路径</option><option value="head">跟随当前小球</option></select></label><label>观察范围<select id="focus-region" aria-label="观察范围"><option value="all">完整地形</option><option value="A">谷底 A</option><option value="B">谷底 B</option><option value="C">谷底 C</option><option value="D">谷底 D</option></select></label><label id="radius-control" hidden>局部半径<select id="focus-radius" aria-label="局部放大尺度"><option value="0.6">0.60 · 初步放大</option><option value="0.2">0.20 · 细看路径</option><option value="0.05">0.05 · 精细观察</option></select></label><label><span id="scale-label">高度</span><select id="height-mode" aria-label="高度显示方式"><option value="log">log(1 + L)</option><option value="raw">原始损失 L</option></select></label><label id="color-control" hidden>曲面色阶<select id="color-mode" aria-label="科学曲面色阶"><option value="contrast">谷底增强</option><option value="linear">线性对照</option></select></label></div>
+          </div></details>
+          <div class="camera-toolbar" aria-label="画面操作"><div class="camera-actions"><div class="camera-modes" role="group" aria-label="拖动方式"><button id="camera-orbit" aria-pressed="true" title="拖动画面改变观察角度">旋转</button><button id="camera-pan" aria-pressed="false" title="拖动画面改变位置">平移</button></div><span class="camera-divider"></span><button id="zoom-out" aria-label="缩小曲面"><span aria-hidden="true">−</span> 缩小</button><button id="zoom-in" aria-label="放大曲面"><span aria-hidden="true">＋</span> 放大</button><button id="reset-camera" aria-label="恢复视角" title="恢复初始角度与缩放"><span aria-hidden="true">↺</span> 复位</button></div><small id="view-control-status" aria-live="polite">拖动画面旋转 · 滚轮缩放</small></div>
+          <div class="scene-frame">
+            <div class="scene-caption"><span id="scene-kind">HIMMELBLAU SURFACE</span><small id="scene-instructions">鼠标悬浮细看 · 拖动旋转 · 滚轮缩放</small></div>
+            <div id="surface" class="surface-plot" role="img" aria-label="Himmelblau 函数三维曲面与四条优化路径"></div>
+            <div id="plot-loading" class="plot-loading">正在生成损失地形…</div>
+            <div class="terrain-key"><span id="minima-key"><span class="minima-symbol">◇</span> A–D 全局最小值</span> <span class="start-symbol">●</span> 共同起点</div>
+            <span id="height-caption" class="height-caption">高度经 log(1 + L) 变换，便于看清谷底</span>
+            <div id="trajectory-overview" class="trajectory-overview" hidden></div>
+            <aside id="hover-inspector" class="hover-inspector" hidden aria-label="局部三维曲面放大镜"><div class="inspection-title"><span data-inspect-title>路径片段 · 侧面透视</span><small data-inspect-radius>半径 1.20</small></div><div class="inspection-tools"><label>范围 <select id="study-radius" aria-label="侧视片段半径"><option value="0.6">0.60</option><option value="1.2" selected>1.20</option><option value="2">2.00</option></select></label><div><button id="inspect-left" aria-label="从另一侧观察片段">↶ 左侧</button><button id="inspect-right" aria-label="从默认侧观察片段">右侧 ↷</button><button id="inspect-close" aria-label="关闭固定侧视">×</button></div></div><div data-inspect-scene class="inspection-scene" role="img" aria-label="悬浮区域的三维曲面和优化路径"></div><p data-inspect-coordinates class="inspection-coordinates"></p><div data-inspect-paths class="inspection-paths"></div><small class="inspection-footnote">与主图虚线范围对应 · 固定后可拖动旋转</small></aside>
+          </div>
+          <div class="minima-directory"><div id="minima-heading" class="minima-heading"><span>四个全局最小值</span><small>L = 0 · 悬浮看细节，点击定位</small></div><div id="minima-list" class="minima-list"></div><p id="custom-minima-note" class="custom-minima-note" hidden>自定义地形 · 未预设全局最低点。可悬浮看局部，或在显示设置中选择“跟随当前小球”。</p><p id="focus-note" class="focus-note" hidden></p></div>
+          <div class="playback">
+            <div class="transport"><button id="replay" class="icon-button" aria-label="回到起点" title="回到起点">↺</button><button id="step-back" class="icon-button" aria-label="后退一步" title="后退一步 · ←"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4v12M15 5l-7 5 7 5Z"/></svg></button><button id="play" class="play-button" aria-label="播放路径"><span id="play-icon">▶</span><span id="play-label">播放</span></button><button id="step" class="icon-button" aria-label="前进一步" title="前进一步 · →"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15 4v12M5 5l7 5-7 5Z"/></svg></button></div>
+            <div class="timeline-wrap"><div class="timeline-heading"><label for="timeline">更新步数</label><div class="step-readout"><span id="step-current">200</span><small> / <span id="step-max">200</span></small></div></div><input id="timeline" aria-label="当前更新步数" type="range" min="0" max="200" value="200"><div class="timeline-ticks"><span>0</span><span id="timeline-mid">100</span><span id="timeline-end">200 步</span></div></div>
+            <div class="speed-control"><div class="speed-heading"><label for="speed">播放速度</label><label class="speed-value"><input id="speed-number" aria-label="播放速度数值" type="number" min="0.25" max="120" step="any" value="35"><span>步/秒</span></label></div><input id="speed" aria-label="播放速度" type="range" min="0.25" max="120" step="any" value="35"><div class="speed-limits"><span>0.25</span><span>120</span></div></div>
+          </div>
+          <div class="playback-help"><span>空格播放 / 暂停 · ← → 单步</span><span>拖动时间轴，回看每一步</span></div>
+        </div>
+
+        <aside class="controls-panel" aria-label="实验参数">
+          <div class="panel-title"><h3>实验参数</h3><button id="reset-all" class="text-button">重置</button></div>
+          <div class="control-group"><label class="control-label" for="start-preset">共同起点 <span>w₁, w₂</span></label>
+            <select id="start-preset"><option value="-4,4">西北山坡　(−4, 4)</option><option value="4,-4">东南山坡　(4, −4)</option><option value="0,0">中央高地　(0, 0)</option><option value="-4,-4">西南山坡　(−4, −4)</option><option value="custom">自选坐标</option></select>
+            <div class="coordinate-inputs"><label>w₁ <input id="start-x" type="number" min="-5" max="5" step="0.1" value="-4"></label><label>w₂ <input id="start-y" type="number" min="-5" max="5" step="0.1" value="4"></label></div>
+            <p class="control-hint">也可以在下方等高线地图上点选。</p>
+          </div>
+          <div class="control-group"><label class="control-label" for="lr">共同学习率 <output id="lr-value" for="lr">0.010</output></label><input id="lr" type="range" min="-4" max="-1" step="any" value="-2"><div class="range-ends"><span>0.0001</span><span>0.1</span></div><p class="control-hint">同一学习率，不代表相同的有效步幅。</p></div>
+          <div class="control-group"><label class="control-label" for="iterations">更新次数 <output id="iterations-value" for="iterations">200</output></label><input id="iterations" type="range" min="50" max="1000" step="50" value="200"><div class="range-ends"><span>50</span><span>1000</span></div></div>
+          <details class="advanced"><summary>算法参数 <span>＋</span></summary><div class="advanced-content">
+            <label class="control-label" for="momentum">Momentum · μ <output id="momentum-value">0.90</output></label><input id="momentum" type="range" min="0" max="0.99" step="0.01" value="0.9">
+            <label class="control-label" for="beta1">Adam · β₁ <output id="beta1-value">0.90</output></label><input id="beta1" type="range" min="0" max="0.99" step="0.01" value="0.9">
+            <label class="control-label" for="beta2">Adam · β₂ <output id="beta2-value">0.999</output></label><input id="beta2" type="range" min="0.9" max="0.9999" step="0.0001" value="0.999">
+            <label class="control-label" for="alpha">RMSprop · α <output id="alpha-value">0.990</output></label><input id="alpha" type="range" min="0.8" max="0.999" step="0.001" value="0.99">
+            <p class="control-hint">ε = 10⁻⁸；无权重衰减，无学习率调度。</p>
+          </div></details>
+          <div class="panel-note"><span>观察提示</span><p>先播放一次，再试着增大学习率。更大的步子，会更早到达谷底吗？</p></div>
+          <p id="parameter-error" class="error-message" role="alert" hidden></p>
+        </aside>
+      </div>
+      <div id="run-notice" class="run-notice" role="status" hidden></div>
+      <div class="plot-pair">
+        <article class="mini-plot-panel"><div class="mini-plot-heading"><div><span class="small-label">从上方，看清每一次转弯</span><h3>一张下山地图</h3></div><span class="plot-action-label">点击地图 → 更换起点</span></div><div id="contour" class="mini-plot" role="img" aria-label="可点击选择起点的等高线地图"></div></article>
+        <article class="mini-plot-panel"><div class="mini-plot-heading"><div><span class="small-label">离谷底，还有多远</span><h3>损失随时间下降</h3></div><span id="loss-scale-label" class="plot-action-label">纵轴对数刻度</span></div><div id="loss-chart" class="mini-plot" role="img" aria-label="四种优化器的损失与更新次数关系"></div></article>
+      </div>
+      <div class="results-header"><div><h3>此刻的实验记录 <span id="result-step">t = 200</span></h3><p>拖动时间轴，指标跟随当前步数变化。</p></div><div class="export-buttons"><button id="export-csv">导出路径 CSV ↓</button><button id="export-json">实验 JSON ↓</button></div></div>
+      <div class="table-scroll"><table class="results-table"><thead><tr><th>优化器</th><th>当前位置 (w₁, w₂)</th><th>真实损失 L</th><th>梯度范数 ‖∇L‖</th><th>状态 / 最近谷底</th><th>稳定起始步</th><th>损失上升次数</th><th>路径长度</th></tr></thead><tbody id="results-body"></tbody></table></div>
+      <p id="criteria-description" class="criteria-note">收敛：L &lt; 10⁻⁶ 且 ‖∇L‖ &lt; 10⁻³。稳定：连续至少 10 个记录点满足条件，且保持至当前步。损失上升次数衡量爬坡，不等同于方向震荡。路径长度在参数平面中计算。</p>
+      <aside class="finding"><span class="finding-label">这次实验告诉我们</span><p id="finding-text">正在计算…</p></aside>
+    </section>
+
+    <section id="experiments" class="experiments-section page-width" aria-labelledby="experiments-title">
+      <div class="section-heading"><div><span class="chapter">动手实验</span><h2 id="experiments-title">一点改变，不同的旅程。</h2></div><p>直觉，来自亲手尝试。</p></div>
+      <div class="experiment-list">
+        <button class="experiment-card" data-experiment="rate"><span class="experiment-number">实验 A <span>↗</span></span><h3>步子大一点，<br>真的更快吗？</h3><p>把学习率从 0.01 调到 0.03。观察哪些路径开始越过谷底，甚至离开地形。</p><span class="experiment-cta">试试更大的学习率 <span>→</span></span></button>
+        <button class="experiment-card" data-experiment="momentum"><span class="experiment-number">实验 B <span>↗</span></span><h3>惯性，<br>是捷径还是绕路？</h3><p>先把 Momentum 的动量降到 0，再逐渐增大。它何时像 SGD，何时换了方向？</p><span class="experiment-cta">从没有惯性开始 <span>→</span></span></button>
+        <button class="experiment-card" data-experiment="basin"><span class="experiment-number">实验 C <span>↗</span></span><h3>换一个起点，<br>会抵达同一个谷底吗？</h3><p>从东南山坡 (4, −4) 出发。比较四条路径的终点，再在地图上选一个新位置。</p><span class="experiment-cta">换到另一侧山坡 <span>→</span></span></button>
+      </div>
+    </section>
+
+    <section id="methods" class="methods-section page-width" aria-labelledby="methods-title">
+      <div class="section-heading"><div><span class="chapter">理解算法</span><h2 id="methods-title">每一种步伐，都有来由。</h2></div><p>梯度告诉方向，优化器决定怎么走。</p></div>
+      <div class="method-grid">
+        <article style="--method-color:#D84F57"><span class="method-dot"></span><h3>SGD</h3><span class="method-subtitle">只看眼前的坡度</span><div class="method-formula">wₜ = wₜ₋₁ − ηgₜ</div><p>直接朝负梯度走一步。坡越陡，步子越大；学习率过大时，也更容易跨过谷底。</p><p class="method-footnote">本实验使用完整解析梯度，没有随机采样噪声。</p></article>
+        <article style="--method-color:#16877E"><span class="method-dot"></span><h3>Momentum</h3><span class="method-subtitle">记住刚才的方向</span><div class="method-formula">vₜ = μvₜ₋₁ + gₜ<br>wₜ = wₜ₋₁ − ηvₜ</div><p>把历史梯度累积成速度。惯性能帮助持续前进，也可能带来过冲、震荡，甚至跨入另一片盆地。</p><p class="method-footnote">经典 Momentum，未启用 Nesterov。</p></article>
+        <article style="--method-color:#7854BA"><span class="method-dot"></span><h3>Adam</h3><span class="method-subtitle">记方向，也记尺度</span><div class="method-formula">mₜ = β₁mₜ₋₁ + (1−β₁)gₜ<br>wₜ = wₜ₋₁ − ηm̂ₜ / (√v̂ₜ + ε)</div><p>结合梯度的一阶、二阶矩与偏差校正，逐坐标调整有效步幅。稳健的步子不一定在这里最先到达。</p><p class="method-footnote">vₜ 为 gₜ² 的指数平均；帽号表示偏差校正。</p></article>
+        <article style="--method-color:#A57316"><span class="method-dot"></span><h3>RMSprop</h3><span class="method-subtitle">为陡峭方向缩小步幅</span><div class="method-formula">sₜ = αsₜ₋₁ + (1−α)gₜ²<br>wₜ = wₜ₋₁ − ηgₜ / (√sₜ + ε)</div><p>用近期梯度的平方平均归一化每个方向。它能缓解尺度差异，也可能在靠近谷底时持续小幅摆动。</p><p class="method-footnote">非中心化 RMSprop，未叠加额外动量。</p></article>
+      </div>
+      <div class="closing-note"><div><span class="small-label">留一个问题给下一次实验</span><h3>更快的答案，<br>藏在更合适的步伐里。</h3></div><div><p>Himmelblau 的四个谷底都是全局最小值。这里展示的是收敛、过冲与盆地选择，不能据此断言某个算法普遍能逃离局部极小值。</p><p>同一学习率是一组受控对照，并不代表每种优化器都用了各自最优的参数。试着改变起点与参数，让结论由实验来回答。</p><a href="#lab">再走一次 ↑</a></div></div>
+      <details class="technical-note"><summary>计算约定与可复现性</summary><p>曲面使用 [−5,5]² 上的 121 × 121 网格。记录 t=0 起点与每次更新后的坐标和原始损失。显示的高度变换不会改变计算结果。路径只在渲染时微小抬升以避免被曲面遮挡；导出数据没有抬升。二维损失图将小于 10⁻¹⁶ 的值绘制在 10⁻¹⁶，真实数值保留在表格与导出文件中。</p><p>路径不裁剪到曲面边界。如果下一次更新产生非有限值或损失超过 10¹²，则停止对应优化器，并保留有效记录。最近谷底只是距离判断，不代表收敛。若暂停回放，记录表与文字结论仅基于截至当前步的路径，导出文件仍包含完整实验。</p><p>以 w₀ 为起点，第 t 次更新使用 gₜ = ∇L(wₜ₋₁)，t ≥ 1。所有平方、除法和平方根逐坐标执行。Adam 的二阶矩更新为 vₜ = β₂vₜ₋₁ + (1−β₂)gₜ²，m̂ₜ = mₜ/(1−β₁ᵗ)，v̂ₜ = vₜ/(1−β₂ᵗ)。ε = 10⁻⁸。</p></details>
+      <p class="criteria-note">谷底放大使用新的局部 121 × 121 网格，自动调整坐标和高度范围。三维线段在相邻更新间沿参数直线细分，并按函数值绘制在曲面上；局部视域会补入边界交点并加密连接，避免短路径被隐藏。悬浮放大窗重新采样局部 49 × 49 曲面，以独立的侧面透视展示坡面和路径。插值不参与优化，导出仍保留原始记录。</p>
+      <details class="reference-notes"><summary>参考与灵感 · 保留原始网页来源 ↗</summary><p>本页自行实现 Himmelblau 数值实验。以下页面用于交互和视觉表达参考；算法优劣仍由当前实验数据说明。小球是当前位置的视觉表示，方向箭头按实际更新方向统一长度显示。</p><div class="reference-links"><article><a href="https://www.apple.com/" target="_blank" rel="noopener">Apple · 界面与排版参考 ↗</a><p>清晰层级、分段控制、轻量的视觉边界。</p></article><article><a href="https://claude.com/" target="_blank" rel="noopener">Claude · 阅读与交互参考 ↗</a><p>克制留白、平静的阅读节奏；本页采用独立的蓝紫配色。</p></article><article><a href="https://github.com/KellerJordan/Muon" target="_blank" rel="noopener">Muon · 原始实现与适用范围 ↗</a><p>关于矩阵权重与向量参数的适用范围。</p></article><article><a href="https://distill.pub/2017/momentum/" target="_blank" rel="noopener">Distill · Why Momentum Really Works ↗</a><p>参数联动、动量振荡与边操作边解释的叙事。</p></article><article><a href="https://github.com/ajithpinninti/gradient-descent-visualizer" target="_blank" rel="noopener">Gradient Descent Visualizer ↗</a><p>立体小球、轨迹开关，以及优化器竞速的呈现方式。</p></article><article><a href="https://www.conceptvisionx.com/lesson/gradient-descent" target="_blank" rel="noopener">ConceptVisionX · Gradient Descent ↗</a><p>三维曲面与等高线联动、逐步观察更新方向。</p></article><article><a href="https://alltools.dev/tools/visualizations/gradient-descent-visualizer/?mode=race&amp;lr=0.001&amp;init=-1%2C+1" target="_blank" rel="noopener">AllTools · Gradient Descent Visualizer ↗</a><p>用户提供的竞速交互参考。</p></article><article><a href="https://www.mysimulator.uk/ai-ml/gradient-descent/sim.html" target="_blank" rel="noopener">MySimulator · Gradient Descent ↗</a><p>用户提供的模拟器参考。</p></article><article><a href="https://cloud.tencent.com/developer/article/1745783" target="_blank" rel="noopener">梯度下降的可视化解释 ↗</a><p>用户提供；以小球、路径与振荡解释优化过程。</p></article></div></details>
+    </section>
+  </main>
+  <footer class="site-footer page-width"><div><span class="brand-mark">∇</span><span>梯度图志 <small>把抽象的算法，变成可以探索的风景。</small></span></div><p>课程问题 36 · Himmelblau 函数<br><a href="https://distill.pub/2021/gnn-intro/" target="_blank" rel="noopener">交互表达灵感：Distill ↗</a> <span> / </span> <a href="https://docs.pytorch.org/docs/stable/optim.html" target="_blank" rel="noopener">算法定义：PyTorch ↗</a></p></footer>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <dialog id="terrain-dialog" class="terrain-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><div><span class="chapter">HIMMELBLAU / DETAIL STUDY</span><h2 id="dialog-title">把每一步，看得更清楚。</h2></div><button id="close-scene" class="expand-button" aria-label="关闭大图">关闭 ×</button></div><div id="dialog-scene"></div></dialog>
+  <noscript><p class="noscript">请启用 JavaScript，以运行优化器和交互图形。</p></noscript>
+</body>
+</html>
