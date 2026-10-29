@@ -218,7 +218,13 @@ function exportCSV(){
   download('\uFEFF'+rows.join('\r\n'),'text/csv;charset=utf-8','csv');
 }
 
-const functionExamples={himmelblau:HIMMELBLAU_EXPRESSION,bowl:'x^2 + 4*y^2',rosenbrock:'(1-x)^2 + 100*(y-x^2)^2',ripples:'0.2*(x^2+y^2) + sin(2*x)*cos(2*y)'};
+const functionExamples={
+  himmelblau:{expression:HIMMELBLAU_EXPRESSION,x:-4,y:4,lr:0.01,iterations:200},
+  // Use a start/step budget suited to each landscape's gradient scale and curvature.
+  bowl:{expression:'x^2 + 4*y^2',x:-3,y:2,lr:0.01,iterations:1000},
+  rosenbrock:{expression:'(1-x)^2 + 100*(y-x^2)^2',x:-1.2,y:1,lr:0.003,iterations:1000},
+  ripples:{expression:'0.2*(x^2+y^2) + sin(2*x)*cos(2*y)',x:2,y:2,lr:0.01,iterations:500}
+};
 function syncFunctionUI(){
   const fn=getObjective(),custom=fn.kind==='custom';
   $('function-status').textContent=`当前：${fn.name}`;
@@ -262,7 +268,14 @@ function bindFunctionControls(){
   updateFormulaPreview();
   $('function-form').addEventListener('submit',e=>{e.preventDefault();applyFunction();});
   $('restore-function').addEventListener('click',()=>applyFunction(true));
-  $('function-preset').addEventListener('change',()=>{const example=functionExamples[$('function-preset').value];if(example)$('function-expression').value=example;updateFormulaPreview();$('function-status').textContent='示例已填入 · 点击应用函数';});
+  $('function-preset').addEventListener('change',()=>{
+    const example=functionExamples[$('function-preset').value];
+    if(!example)return;
+    $('function-expression').value=example.expression;
+    putConfig({...configFromInputs(),x:example.x,y:example.y,lr:example.lr,iterations:example.iterations});
+    updateFormulaPreview();
+    $('function-status').textContent=`已载入建议配置 · 起点 (${example.x}, ${example.y}) · η=${example.lr} · ${example.iterations} 步`;
+  });
   $('function-expression').addEventListener('input',()=>{updateFormulaPreview();$('function-preset').value='custom';$('function-status').textContent='有未应用的修改';$('function-error').hidden=true;$('function-expression').setAttribute('aria-invalid','false');});
   $('function-expression').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();applyFunction();}});
 }
