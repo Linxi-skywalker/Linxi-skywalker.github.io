@@ -67,7 +67,8 @@ function updateResults(){
   if(stable.length){bits.push(`截至第 ${current} 步，${stable[0].name} 最早进入持续稳定状态（从第 ${stable[0].stableAt} 步起），接近谷底 ${stable[0].nearest}。`);}else{bits.push(`截至第 ${current} 步，还没有优化器满足持续稳定的判据。${ranking.length?`${ranking[0].name} 的当前损失最低（${fmt(ranking[0].final.loss)}）。`:''}`);}
   const mo=summaries[1];
   if(visible.has('Momentum')&&mo.uphill>0){bits.push(`Momentum 已出现 ${mo.uphill} 次损失上升，惯性并不保证路径更平滑${visible.has('SGD')&&mo.nearest!==summaries[0].nearest?'，它与 SGD 还接近了不同的谷底':''}。`);}
-  if(visible.has('Adam')&&visible.has('SGD')&&stable[0]?.name!=='Adam'&&summaries[2].final.loss>summaries[0].final.loss&&!partial[0].diverged){bits.push('相同学习率下，Adam 在这次实验中没有领先 SGD。');}
+  const adam=METHODS.findIndex(method=>method.name==='Adam');
+  if(visible.has('Adam')&&visible.has('SGD')&&stable[0]?.name!=='Adam'&&summaries[adam].final.loss>summaries[0].final.loss&&!partial[0].diverged){bits.push('相同学习率下，Adam 在这次实验中没有领先 SGD。');}
   const unstable=active.filter(s=>!s.converged).map(s=>s.name);
   if(current===experiment.config.iterations&&unstable.length)bits.push(`${unstable.join('、')} 尚未满足严格收敛判据；到达预算不等于收敛。`);
   $('finding-text').textContent=bits.join(' ');

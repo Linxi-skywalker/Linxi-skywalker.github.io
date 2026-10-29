@@ -34,7 +34,7 @@ function pathTrace(run,i,dimension,head=false,kind='line') {
   const base=head?[pts.at(-1)]:dimension===3&&!actual?projectedRuns[i].slice(0,(pts.length-1)*12+1):pts;
   const data=dimension===3&&!actual?refineDisplayPath(clipPath(base,terrain.xRange,terrain.yRange),(terrain.xRange[1]-terrain.xRange[0])/160):base.map(p=>dimension===3&&!inside(p)?null:p);
   const color=dimension===3&&style==='science'?sciencePaths[i]:METHODS[i].color;
-  const trace={type:dimension===3?'scatter3d':'scatter',mode:actual?'markers':'lines',name:run.name,x:data.map(p=>p?.x??null),y:data.map(p=>p?.y??null),customdata:data.map(p=>p?.loss??null),text:data.map(p=>p?.t??null),connectgaps:false,hovertemplate:hover,showlegend:false,visible:shown(run.name)&&(kind==='samples'?samples:head?!display.balls:display.trails),line:{color,width:dimension===3?7:3,dash:dimension===2?['solid','solid','dot','dash'][i]:undefined},marker:{color,size:dimension===3?(head?5:2.5):head?8:3,line:{color:'#fff',width:1}}};
+  const trace={type:dimension===3?'scatter3d':'scatter',mode:actual?'markers':'lines',name:run.name,x:data.map(p=>p?.x??null),y:data.map(p=>p?.y??null),customdata:data.map(p=>p?.loss??null),text:data.map(p=>p?.t??null),connectgaps:false,hovertemplate:hover,showlegend:false,visible:shown(run.name)&&(kind==='samples'?samples:head?!display.balls:display.trails),line:{color,width:dimension===3?7:3,dash:dimension===2?['solid','solid','dash','dot'][i]:undefined},marker:{color,size:dimension===3?(head?5:2.5):head?8:3,line:{color:'#fff',width:1}}};
   if(dimension===3) trace.z=data.map(p=>p?height(p.loss,mode)+lift()*4:null);
   return trace;
 }

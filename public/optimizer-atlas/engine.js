@@ -4,8 +4,8 @@ export const DEFAULTS = Object.freeze({x:-4,y:4,lr:0.01,iterations:200,momentum:
 export const METHODS = Object.freeze([
   {name:'SGD',color:'#D84F57',tag:'跟随当下的坡度'},
   {name:'Momentum',color:'#16877E',tag:'带着惯性向前'},
-  {name:'Adam',color:'#7854BA',tag:'记忆与自适应'},
   {name:'RMSprop',color:'#A57316',tag:'为每个方向调步幅'},
+  {name:'Adam',color:'#7854BA',tag:'记忆与自适应'},
 ]);
 export const MINIMA = Object.freeze([
   {id:'A',x:3,y:2},
