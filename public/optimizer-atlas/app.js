@@ -221,19 +221,27 @@ function exportCSV(){
 const functionExamples={
   himmelblau:{expression:HIMMELBLAU_EXPRESSION,x:-4,y:4,lr:0.01,iterations:200},
   // Use a start/step budget suited to each landscape's gradient scale and curvature.
-  bowl:{expression:'x^2 + 4*y^2',x:-3,y:2,lr:0.01,iterations:1000},
-  rosenbrock:{expression:'(1-x)^2 + 100*(y-x^2)^2',x:-1.2,y:1,lr:0.003,iterations:1000},
-  ripples:{expression:'0.2*(x^2+y^2) + sin(2*x)*cos(2*y)',x:2,y:2,lr:0.01,iterations:500}
+  bowl:{expression:'x^2 + 4*y^2',x:-1,y:0.5,lr:0.01,iterations:1000},
+  rosenbrock:{expression:'(1-x)^2 + 100*(y-x^2)^2',x:0.9,y:0.81,lr:0.003,iterations:1000},
+  ripples:{expression:'0.2*(x^2+y^2) + sin(2*x)*cos(2*y)',x:-1,y:0.5,lr:0.01,iterations:1000}
 };
 function syncFunctionUI(){
   const fn=getObjective(),custom=fn.kind==='custom';
   $('function-status').textContent=`当前：${fn.name}`;
   $('surface').setAttribute('aria-label',`${fn.name} 函数曲面与优化路径`);
+  $('minima-key').innerHTML=fn.kind==='himmelblau'?'◇ A–D 全局最小值':`◇ ${fn.name} 全局最小值`;
+  const minima=getMinima();
   for(const id of ['minima-heading','minima-list','minima-key'])$(id).hidden=custom;
   $('custom-minima-note').hidden=!custom;$('show-minima').disabled=custom;$('focus-region').disabled=custom;
-  document.querySelectorAll('#study-target option').forEach(option=>{if(['A','B','C','D'].includes(option.value))option.disabled=custom;});
-  $('loss-scale-label').textContent=custom?'线性刻度 · 保留负值':'纵轴对数刻度';
-  $('criteria-description').textContent=custom?'自定义函数：‖∇L‖ < 10⁻³ 记为“梯度足够小”；连续至少 10 个记录点满足且保持到当前步，才记为稳定。驻点可能是鞍点或极大值，全局最优性未验证。损失上升次数衡量爬坡，路径长度在参数平面中计算。':'收敛：L < 10⁻⁶ 且 ‖∇L‖ < 10⁻³。稳定：连续至少 10 个记录点满足条件，且保持至当前步。损失上升次数衡量爬坡，不等同于方向震荡。路径长度在参数平面中计算。';
+  $('minima-heading').querySelector('span').textContent=fn.kind==='himmelblau'?'四个全局最小值':`${fn.name} · 全局最小值`;
+  $('minima-heading').querySelector('small').textContent=`L = ${fn.minimumValue.toPrecision(5)} · 悬浮看细节，点击定位`;
+  $('minima-list').innerHTML=minima.map(p=>`<button data-minimum="${p.id}" aria-pressed="false" aria-label="放大全局最小值"><span class="minimum-id">${p.id}</span><span><strong>(${p.x.toFixed(4)}, ${p.y.toFixed(4)})</strong><small>全局最小值 · L = ${fn.minimumValue.toPrecision(5)}</small></span><span class="minimum-arrow">↗</span></button>`).join('');
+  const focus=$('focus-region');
+  for(const option of Array.from(focus.options).filter(o=>o.value==='G'))option.remove();
+  if(fn.kind==='preset'&&minima.length){const option=document.createElement('option');option.value='G';option.textContent='全局最小值';focus.append(option);}
+  document.querySelectorAll('#study-target option').forEach(option=>{if(['A','B','C','D','G'].includes(option.value))option.disabled=custom||!minima.some(p=>p.id===option.value);});
+  $('loss-scale-label').textContent=custom||fn.signed?'线性刻度 · 保留负值':'纵轴对数刻度';
+  $('criteria-description').textContent=custom?'自定义函数：‖∇L‖ < 10⁻³ 记为“梯度足够小”；连续至少 10 个记录点满足且保持到当前步，才记为稳定。驻点可能是鞍点或极大值，全局最优性未验证。损失上升次数衡量爬坡，路径长度在参数平面中计算。':`收敛：|L − ${fn.minimumValue.toPrecision(5)}| < 10⁻⁶ 且 ‖∇L‖ < 10⁻³。稳定：连续至少 10 个记录点满足条件，且保持至当前步。损失上升次数衡量爬坡，不等同于方向震荡。路径长度在参数平面中计算。`;
 }
 async function applyFunction(restore=false){
   if(rendering)return;
@@ -275,6 +283,7 @@ function bindFunctionControls(){
     putConfig({...configFromInputs(),x:example.x,y:example.y,lr:example.lr,iterations:example.iterations});
     updateFormulaPreview();
     $('function-status').textContent=`已载入建议配置 · 起点 (${example.x}, ${example.y}) · η=${example.lr} · ${example.iterations} 步`;
+    applyFunction();
   });
   $('function-expression').addEventListener('input',()=>{updateFormulaPreview();$('function-preset').value='custom';$('function-status').textContent='有未应用的修改';$('function-error').hidden=true;$('function-expression').setAttribute('aria-invalid','false');});
   $('function-expression').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();applyFunction();}});
@@ -322,7 +331,7 @@ function bindControls(){
 }
 
 function updateFocusNote(){
-    const id=$('focus-region').value,p=MINIMA.find(p=>p.id===id),radius=Number($('focus-radius').value);
+    const id=$('focus-region').value,p=getMinima().find(p=>p.id===id),radius=Number($('focus-radius').value);
     $('radius-control').hidden=!p;$('focus-note').hidden=!p;
     const region=resolveRegion(selectedExperiment().runs,id,radius);
     $('focus-note').textContent=p?(region.empty?`所选路径没有经过谷底 ${id} 的半径 ${radius} 范围，主图保留完整轨迹。悬浮此谷底，可查看局部三维地形。`:`谷底 ${id} · 半径 ${radius}；经过此范围：${region.methods.join('、')}。左下角保留全程轨迹，悬浮可看局部立体放大。`):'';
@@ -340,14 +349,7 @@ function bindDetailControls(){
   window.addEventListener('blur',()=>{for(const key of [...viewGestures])endViewInteraction(key);});
   for(const [id,mode] of [['camera-orbit','orbit'],['camera-pan','pan']])$(id).addEventListener('click',()=>viewAction(async()=>{dragMode=mode;await setInteractionMode(mode);syncViewControls();}));
   $('view-options').addEventListener('toggle',()=>requestAnimationFrame(()=>resizeSurface()));
-  $('minima-list').innerHTML=MINIMA.map(p=>`<button data-minimum="${p.id}" aria-pressed="false" aria-label="放大全局最小值 ${p.id}"><span class="minimum-id">${p.id}</span><span><strong>(${p.x.toFixed(4)}, ${p.y.toFixed(4)})</strong><small>全局最小值 · L = 0</small></span><span class="minimum-arrow">↗</span></button>`).join('');
-  document.querySelectorAll('[data-minimum]').forEach(b=>{
-    const p=MINIMA.find(p=>p.id===b.dataset.minimum);
-    b.addEventListener('click',()=>{$('focus-region').value=b.dataset.minimum;local();});
-    const inspect=()=>showInspection(p.x,p.y,`全局最小值 ${p.id} · L=0`);
-    b.addEventListener('pointerenter',inspect);b.addEventListener('focus',inspect);
-    b.addEventListener('pointerleave',hideInspection);b.addEventListener('blur',hideInspection);
-  });
+  $('minima-list').addEventListener('click',e=>{const b=e.target.closest('[data-minimum]');if(!b)return;$('focus-region').value=b.dataset.minimum;local();});
   $('focus-region').addEventListener('change',local);$('focus-radius').addEventListener('change',local);
   $('path-samples').addEventListener('change',()=>refreshExperiment({preserveStep:true}));
   for(const id of ['marker-mode','show-trails','show-minima','show-arrows','study-target','study-radius','color-mode'])$(id).addEventListener('change',local);

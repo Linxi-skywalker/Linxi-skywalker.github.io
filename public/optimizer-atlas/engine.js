@@ -15,13 +15,25 @@ export const MINIMA = Object.freeze([
 ]);
 export const CRITERIA = Object.freeze({loss:1e-6,gradNorm:1e-3,window:10,maxLoss:1e12});
 export const HIMMELBLAU_EXPRESSION='(x^2+y-11)^2+(x+y^2-7)^2';
+export const PRESET_MINIMA=Object.freeze({
+  bowl:{name:'椭圆碗',minimumValue:0,minima:[{id:'G',x:0,y:0}]},
+  rosenbrock:{name:'Rosenbrock 香蕉函数',minimumValue:0,minima:[{id:'G',x:1,y:1}]},
+  ripples:{name:'波纹地形',minimumValue:-0.8878628265737075,minima:[{id:'G',x:-0.7137758893822974,y:0}]}
+});
 let objective=null;
+let objectiveInfo=null;
 export function setObjective(expression,start){
   const next=expression===null?null:validateExpression(compileExpression(expression),start);
-  objective=next;
+  const key=next?.expression.replace(/\s/g,'').replaceAll('**','^');
+  const presets={
+    'x^2+4*y^2':'bowl',
+    '(1-x)^2+100*(y-x^2)^2':'rosenbrock',
+    '0.2*(x^2+y^2)+sin(2*x)*cos(2*y)':'ripples'
+  };
+  objective=next;objectiveInfo=next?PRESET_MINIMA[presets[key]]??null:null;
 }
-export function getObjective(){return {kind:objective?'custom':'himmelblau',name:objective?'自定义函数':'Himmelblau',expression:objective?.expression??HIMMELBLAU_EXPRESSION};}
-export function getMinima(){return objective?[]:MINIMA;}
+export function getObjective(){return {kind:objective?(objectiveInfo?'preset':'custom'):'himmelblau',name:objectiveInfo?.name??(objective?'自定义函数':'Himmelblau'),expression:objective?.expression??HIMMELBLAU_EXPRESSION,minimumValue:objectiveInfo?.minimumValue??0,knownGlobal:Boolean(objectiveInfo),signed:objectiveInfo?.minimumValue<0};}
+export function getMinima(){return objective?(objectiveInfo?.minima??[]):MINIMA;}
 export function displayHeight(value,mode='log'){return mode==='log'?Math.sign(value)*Math.log1p(Math.abs(value)):value;}
 
 export function loss(x,y) {
@@ -80,22 +92,22 @@ export function simulate(name, config={}) {
 
 export function summarize(run) {
   const p=run.points,final=p.at(-1);
-  const custom=run.function?.kind==='custom';
-  const qualifies=q=>(custom||q.loss<CRITERIA.loss)&&q.gradNorm<CRITERIA.gradNorm;
+  const known=Boolean(run.function?.knownGlobal),custom=run.function?.kind==='custom';
+  const qualifies=q=>(custom||Math.abs(q.loss-(run.function?.minimumValue??0))<CRITERIA.loss)&&q.gradNorm<CRITERIA.gradNorm;
   let suffix=p.length;
   while(suffix>0&&qualifies(p[suffix-1])) suffix--;
-  const stationary=!run.diverged&&qualifies(final),converged=!custom&&stationary;
+  const stationary=!run.diverged&&qualifies(final),converged=known&&stationary;
   const stableAt=stationary&&p.length-suffix>=CRITERIA.window?p[suffix].t:null;
   let uphill=0,pathLength=0;
   for(let i=1;i<p.length;i++) {
     if(p[i].loss-p[i-1].loss>1e-10*Math.max(1,Math.abs(p[i-1].loss))) uphill++;
     pathLength+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);
   }
-  const ordered=(custom?[]:MINIMA).map(q=>({...q,distance:Math.hypot(final.x-q.x,final.y-q.y)})).sort((a,b)=>a.distance-b.distance);
+  const ordered=getMinima().map(q=>({...q,distance:Math.hypot(final.x-q.x,final.y-q.y)})).sort((a,b)=>a.distance-b.distance);
   return {final,converged,stationary,stableAt,nearest:ordered[0]?.id??null,distance:ordered[0]?.distance??null,uphill,pathLength};
 }
 export function runExperiment(config={}) {
   const resolved={...DEFAULTS,...config};
   const runs=METHODS.map(m=>simulate(m.name,resolved));
-  return {config:resolved,runs,summaries:runs.map(summarize),criteria:{...CRITERIA,mode:objective?'stationary-gradient':'known-zero-minimum'},function:getObjective()};
+  return {config:resolved,runs,summaries:runs.map(summarize),criteria:{...CRITERIA,mode:getObjective().knownGlobal?'known-global-minimum':'stationary-gradient'},function:getObjective()};
 }
