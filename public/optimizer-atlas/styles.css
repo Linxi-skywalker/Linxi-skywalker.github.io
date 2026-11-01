@@ -340,7 +340,7 @@ output { color: var(--accent); font: 12px var(--mono); }
 .noscript { padding: 20px; text-align: center; }
 
 /* Focus mode: the same controls, a larger canvas. */
-.terrain-dialog { width: calc(100vw - 40px); height: calc(100dvh - 36px); max-width: 1600px; max-height: none; border: 1px solid hsl(235 22% 85.7%); border-radius: 20px; background: white; color: var(--ink); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.terrain-dialog { width: calc(100vw - 16px); height: calc(100dvh - 16px); max-width: none; max-height: none; border: 1px solid hsl(235 22% 85.7%); border-radius: 15px; background: white; color: var(--ink); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 .terrain-dialog:not([open]) { display: none; }
 .terrain-dialog::backdrop { background: #25263b60; backdrop-filter: blur(8px); }
 .dialog-header { height: 70px; padding: 17px 26px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
@@ -365,7 +365,7 @@ output { color: var(--accent); font: 12px var(--mono); }
 #dialog-scene { flex: 1; min-height: 0; position: relative; overflow: hidden; }
 .terrain-dialog .scene-column { min-height: 100%; height: 100%; }
 .terrain-dialog .canvas-header { padding-block: 12px; }
-.terrain-dialog .optimizer-picker { padding-bottom: 10px; }
+.terrain-dialog .optimizer-picker, .terrain-dialog .minima-directory, .terrain-dialog #expand-scene { display: none; }
 .terrain-dialog .scene-frame { min-height: 280px; }
 .terrain-dialog .surface-plot { height: 100%; min-height: 280px; }
 .terrain-dialog .minima-directory { padding-block: 8px; }
