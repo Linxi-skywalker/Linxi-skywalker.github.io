@@ -133,6 +133,7 @@
   <div id="toast" class="toast" role="status" hidden></div>
   <dialog id="terrain-dialog" class="terrain-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><div><span class="chapter">HIMMELBLAU / DETAIL STUDY</span><h2 id="dialog-title">把每一步，看得更清楚。</h2></div><button id="close-scene" class="expand-button" aria-label="关闭大图">关闭 ×</button></div><div id="dialog-modebar" class="dialog-modebar">
   <div class="dialog-mode-switch" role="group" aria-label="全屏显示模式"><button id="dialog-mode-single" class="selected" aria-pressed="true">单图</button><button id="dialog-mode-compare" aria-pressed="false">左右对比</button></div>
+  <div id="dialog-compare-view" class="dialog-compare-view" role="group" aria-label="左右对比视图" hidden><span>两图视图</span><div><button id="compare-view-3d" class="selected" aria-pressed="true">立体</button><button id="compare-view-top" aria-pressed="false">俯视</button></div></div>
   <div id="dialog-single-controls" class="dialog-single-controls">
     <label>优化器<select id="dialog-method"><option value="all">全部对比</option><option value="SGD">SGD</option><option value="Momentum">Momentum</option><option value="RMSprop">RMSprop</option><option value="Adam">Adam</option></select></label>
     <label>学习率 η<input id="dialog-lr" type="number" min="0.0001" max="0.1" step="any"></label><label>起点 w₁<input id="dialog-x" type="number" min="-5" max="5" step="0.1"></label><label>起点 w₂<input id="dialog-y" type="number" min="-5" max="5" step="0.1"></label><label>更新步数<input id="dialog-iterations" type="number" min="1" max="1000" step="1"></label>

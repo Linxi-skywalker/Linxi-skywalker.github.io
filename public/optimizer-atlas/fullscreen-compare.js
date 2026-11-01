@@ -87,12 +87,16 @@ async function renderCard(card,view){
   }catch(error){result.textContent=error.message;result.dataset.error='true';}
 }
 export function createFullscreenCompare(root,config,view='3d'){
+  let currentView=view;
   root.innerHTML=cardMarkup('left','SGD',config)+cardMarkup('right','Adam',config);
   const cards=[...root.querySelectorAll('[data-compare-side]')];
   for(const card of cards){
     syncParamLabels(card,readConfig(card).method);
-    card.addEventListener('change',()=>renderCard(card,view));
+    card.addEventListener('change',()=>renderCard(card,currentView));
     renderCard(card,view);
   }
-  return {resize:()=>cards.forEach(card=>Plotly.Plots.resize(card.querySelector('.compare-chart'))),refresh:nextView=>cards.forEach(card=>renderCard(card,nextView))};
+  return {
+    resize:()=>cards.forEach(card=>Plotly.Plots.resize(card.querySelector('.compare-chart'))),
+    setView:nextView=>{currentView=nextView;cards.forEach(card=>renderCard(card,currentView));}
+  };
 }

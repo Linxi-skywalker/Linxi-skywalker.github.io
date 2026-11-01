@@ -352,15 +352,26 @@ function syncFullscreenControls(){
   $('dialog-method').value=visible.size===4?'all':visible.size===1?[...visible][0]:'all';
   for(const [id,key] of [['dialog-lr','lr'],['dialog-x','x'],['dialog-y','y'],['dialog-iterations','iterations'],['dialog-momentum','momentum'],['dialog-beta1','beta1'],['dialog-beta2','beta2'],['dialog-alpha','alpha']])$(id).value=c[key];
 }
+function syncCompareViewControls(view){
+  for(const [id,mode] of [['compare-view-3d','3d'],['compare-view-top','top']]){
+    $(id).classList.toggle('selected',view===mode);
+    $(id).setAttribute('aria-pressed',String(view===mode));
+  }
+}
+function setFullscreenCompareView(view){
+  syncCompareViewControls(view);
+  fullscreenCompare?.setView(view);
+}
 function setFullscreenMode(mode){
   fullscreenMode=mode;
   const compare=mode==='compare',scene=$('scene-view'),root=$('fullscreen-compare');
   $('dialog-mode-single').classList.toggle('selected',!compare);$('dialog-mode-compare').classList.toggle('selected',compare);
   $('dialog-mode-single').setAttribute('aria-pressed',String(!compare));$('dialog-mode-compare').setAttribute('aria-pressed',String(compare));
-  $('dialog-single-controls').hidden=compare;scene.hidden=compare;root.hidden=!compare;
+  $('dialog-single-controls').hidden=compare;$('dialog-compare-view').hidden=!compare;scene.hidden=compare;root.hidden=!compare;
   if(compare){
     const view=$('view-top').getAttribute('aria-pressed')==='true'?'top':'3d';
-    if(fullscreenCompare)fullscreenCompare.refresh(view);
+    syncCompareViewControls(view);
+    if(fullscreenCompare)fullscreenCompare.setView(view);
     else fullscreenCompare=createFullscreenCompare(root,configFromInputs(),view);
     requestAnimationFrame(()=>fullscreenCompare?.resize());
   }else requestAnimationFrame(()=>resizeSurface());
@@ -373,6 +384,8 @@ function bindFullscreenControls(){
   });
   $('dialog-mode-single').addEventListener('click',()=>setFullscreenMode('single'));
   $('dialog-mode-compare').addEventListener('click',()=>setFullscreenMode('compare'));
+  $('compare-view-3d').addEventListener('click',()=>setFullscreenCompareView('3d'));
+  $('compare-view-top').addEventListener('click',()=>setFullscreenCompareView('top'));
 }
 function bindDetailControls(){
   const local=()=>{refreshExperiment({preserveStep:true});};

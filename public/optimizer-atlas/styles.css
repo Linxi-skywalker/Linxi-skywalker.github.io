@@ -350,6 +350,10 @@ output { color: var(--accent); font: 12px var(--mono); }
 .dialog-mode-switch { display: flex; gap: 3px; padding: 3px; background: var(--soft); border-radius: 10px; flex: none; }
 .dialog-mode-switch button { min-height: 31px; padding: 5px 13px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 11px; }
 .dialog-mode-switch button.selected { background: #fff; color: var(--ink); box-shadow: 0 1px 4px #25263b14; }
+.dialog-compare-view { display: flex; align-items: center; gap: 9px; margin-left: auto; color: var(--muted); font-size: 10px; white-space: nowrap; }
+.dialog-compare-view > div { display: flex; padding: 3px; gap: 2px; background: var(--soft); border-radius: 9px; }
+.dialog-compare-view button { min-height: 29px; padding: 4px 12px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 10px; }
+.dialog-compare-view button.selected { background: #fff; color: var(--ink); box-shadow: 0 1px 4px #25263b14; }
 .dialog-single-controls { display: flex; align-items: end; gap: 10px; min-width: 0; flex: 1; flex-wrap: wrap; }
 .dialog-single-controls > label, .dialog-advanced label { display: flex; flex-direction: column; gap: 4px; min-width: 100px; color: var(--muted); font-size: 9px; }
 .dialog-single-controls > label:first-child { min-width: 130px; }
@@ -552,6 +556,7 @@ output { color: var(--accent); font: 12px var(--mono); }
   .dialog-header .chapter { font-size: 7px; }
   .terrain-dialog { overflow: hidden; }
   .dialog-modebar { align-items: start; gap: 8px; padding: 9px 10px; flex-wrap: wrap; }
+  .dialog-compare-view { margin-left: 0; }
   .dialog-single-controls { display: grid; grid-template-columns: repeat(3,minmax(80px,1fr)); gap: 7px; }
   .dialog-single-controls > label, .dialog-single-controls > label:first-child { min-width: 0; }
   .dialog-advanced { grid-column: 1 / -1; }
