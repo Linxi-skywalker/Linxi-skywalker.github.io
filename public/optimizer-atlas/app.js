@@ -35,6 +35,12 @@ function selectedExperiment(){const runs=experiment.runs.filter(r=>visible.has(r
 function syncOptimizerControls(){
   $('optimizer-select').value=visible.size===4?'all':visible.size===1?[...visible][0]:'custom';
   document.querySelectorAll('[data-method]').forEach(b=>b.setAttribute('aria-pressed',String(visible.has(b.dataset.method))));
+  syncLossChartLegend();
+}
+function syncLossChartLegend(){
+  const legend=$('loss-legend');
+  if(!legend)return;
+  legend.innerHTML=METHODS.filter(method=>visible.has(method.name)).map(method=>`<span class="loss-legend-item" style="--method-color:${method.color}"><i aria-hidden="true"></i>${method.name}</span>`).join('');
 }
 async function applyOptimizerSelection(choice){
   const names=choice==='all'?METHODS.map(m=>m.name):[choice];
@@ -290,6 +296,7 @@ function bindFunctionControls(){
 }
 
 function bindControls(){
+  syncLossChartLegend();
   bindFunctionControls();
   bindDetailControls();
   $('legend').innerHTML=METHODS.map(m=>`<button data-method="${m.name}" aria-label="显示或隐藏 ${m.name} 路径" aria-pressed="true" style="--method-color:${m.color}"><span class="legend-line"></span>${m.name}</button>`).join('');
