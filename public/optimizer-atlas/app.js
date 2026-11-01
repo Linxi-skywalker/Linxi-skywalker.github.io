@@ -1,12 +1,12 @@
 import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION} from './engine.js';
 import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js';
 import {resolveRegion} from './inspection.js';
-import {createFullscreenCompare} from './fullscreen-compare.js';
+import {createFullscreenCompare} from './fullscreen-compare.js?v=20261101-2';
 
 const $=id=>document.getElementById(id);
 let experiment=runExperiment(),current=200,playing=false,frame=0,playOrigin=0,originStep=0,lastDraw=0,busy=false,rendering=false;
 let desiredStep=null,pendingRefresh=null,toastTimer,debounceTimer,playVersion=0,playbackRate=35;
-let fullscreenMode='single',fullscreenCompare=null;
+let fullscreenMode='single',fullscreenCompare=null,fullscreenCompareView='3d';
 let drawCompletion=Promise.resolve();
 const viewGestures=new Set();
 let viewHoldStart=null,dragMode='orbit';
@@ -359,6 +359,7 @@ function syncCompareViewControls(view){
   }
 }
 function setFullscreenCompareView(view){
+  fullscreenCompareView=view;
   syncCompareViewControls(view);
   fullscreenCompare?.setView(view);
 }
@@ -369,10 +370,9 @@ function setFullscreenMode(mode){
   $('dialog-mode-single').setAttribute('aria-pressed',String(!compare));$('dialog-mode-compare').setAttribute('aria-pressed',String(compare));
   $('dialog-single-controls').hidden=compare;$('dialog-compare-view').hidden=!compare;scene.hidden=compare;root.hidden=!compare;
   if(compare){
-    const view=$('view-top').getAttribute('aria-pressed')==='true'?'top':'3d';
-    syncCompareViewControls(view);
-    if(fullscreenCompare)fullscreenCompare.setView(view);
-    else fullscreenCompare=createFullscreenCompare(root,configFromInputs(),view);
+    syncCompareViewControls(fullscreenCompareView);
+    if(fullscreenCompare)fullscreenCompare.setView(fullscreenCompareView);
+    else fullscreenCompare=createFullscreenCompare(root,configFromInputs(),fullscreenCompareView);
     requestAnimationFrame(()=>fullscreenCompare?.resize());
   }else requestAnimationFrame(()=>resizeSurface());
 }
@@ -416,13 +416,14 @@ function bindDetailControls(){
   const scene=$('scene-view'),home=document.createComment('scene home'),dialog=$('terrain-dialog');
   scene.before(home);bindFullscreenControls();
   $('expand-scene').addEventListener('click',()=>{
+    fullscreenCompareView=$('view-top').getAttribute('aria-pressed')==='true'?'top':'3d';
     syncFullscreenControls();$('dialog-scene').append(scene);$('expand-scene').hidden=true;
     dialog.showModal();document.body.classList.add('scene-expanded');
     requestAnimationFrame(()=>setFullscreenMode(fullscreenMode));
   });
   $('close-scene').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('close',()=>{
-    home.after(scene);scene.hidden=false;$('dialog-single-controls').hidden=false;$('expand-scene').hidden=false;document.body.classList.remove('scene-expanded');
+    home.after(scene);scene.hidden=false;$('dialog-single-controls').hidden=false;$('dialog-compare-view').hidden=true;$('expand-scene').hidden=false;document.body.classList.remove('scene-expanded');
     requestAnimationFrame(()=>resizeSurface());$('expand-scene').focus();
   });
 }
