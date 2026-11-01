@@ -32,7 +32,7 @@ export function setObjective(expression,start){
   };
   objective=next;objectiveInfo=next?PRESET_MINIMA[presets[key]]??null:null;
 }
-export function getObjective(){return {kind:objective?(objectiveInfo?'preset':'custom'):'himmelblau',name:objectiveInfo?.name??(objective?'自定义函数':'Himmelblau'),expression:objective?.expression??HIMMELBLAU_EXPRESSION,minimumValue:objectiveInfo?.minimumValue??0,knownGlobal:Boolean(objectiveInfo),signed:objectiveInfo?.minimumValue<0};}
+export function getObjective(){return {kind:objective?(objectiveInfo?'preset':'custom'):'himmelblau',name:objectiveInfo?.name??(objective?'自定义函数':'Himmelblau'),expression:objective?.expression??HIMMELBLAU_EXPRESSION,minimumValue:objectiveInfo?.minimumValue??0,knownGlobal:objective?Boolean(objectiveInfo):true,signed:objectiveInfo?.minimumValue<0};}
 export function getMinima(){return objective?(objectiveInfo?.minima??[]):MINIMA;}
 export function displayHeight(value,mode='log'){return mode==='log'?Math.sign(value)*Math.log1p(Math.abs(value)):value;}
 
