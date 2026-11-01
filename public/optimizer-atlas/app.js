@@ -1,10 +1,12 @@
 import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION} from './engine.js';
 import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js';
 import {resolveRegion} from './inspection.js';
+import {createFullscreenCompare} from './fullscreen-compare.js';
 
 const $=id=>document.getElementById(id);
 let experiment=runExperiment(),current=200,playing=false,frame=0,playOrigin=0,originStep=0,lastDraw=0,busy=false,rendering=false;
 let desiredStep=null,pendingRefresh=null,toastTimer,debounceTimer,playVersion=0,playbackRate=35;
+let fullscreenMode='single',fullscreenCompare=null;
 let drawCompletion=Promise.resolve();
 const viewGestures=new Set();
 let viewHoldStart=null,dragMode='orbit';
@@ -345,6 +347,33 @@ function updateFocusNote(){
     $('focus-note').classList.toggle('unvisited',region.empty);
     document.querySelectorAll('[data-minimum]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.minimum===id)));
 }
+function syncFullscreenControls(){
+  const c=configFromInputs();
+  $('dialog-method').value=visible.size===4?'all':visible.size===1?[...visible][0]:'all';
+  for(const [id,key] of [['dialog-lr','lr'],['dialog-x','x'],['dialog-y','y'],['dialog-iterations','iterations'],['dialog-momentum','momentum'],['dialog-beta1','beta1'],['dialog-beta2','beta2'],['dialog-alpha','alpha']])$(id).value=c[key];
+}
+function setFullscreenMode(mode){
+  fullscreenMode=mode;
+  const compare=mode==='compare',scene=$('scene-view'),root=$('fullscreen-compare');
+  $('dialog-mode-single').classList.toggle('selected',!compare);$('dialog-mode-compare').classList.toggle('selected',compare);
+  $('dialog-mode-single').setAttribute('aria-pressed',String(!compare));$('dialog-mode-compare').setAttribute('aria-pressed',String(compare));
+  $('dialog-single-controls').hidden=compare;scene.hidden=compare;root.hidden=!compare;
+  if(compare){
+    const view=$('view-top').getAttribute('aria-pressed')==='true'?'top':'3d';
+    if(fullscreenCompare)fullscreenCompare.refresh(view);
+    else fullscreenCompare=createFullscreenCompare(root,configFromInputs(),view);
+    requestAnimationFrame(()=>fullscreenCompare?.resize());
+  }else requestAnimationFrame(()=>resizeSurface());
+}
+function bindFullscreenControls(){
+  $('dialog-method').addEventListener('change',async()=>{await applyOptimizerSelection($('dialog-method').value);syncFullscreenControls();});
+  const fields={ 'dialog-lr':'lr','dialog-x':'x','dialog-y':'y','dialog-iterations':'iterations','dialog-momentum':'momentum','dialog-beta1':'beta1','dialog-beta2':'beta2','dialog-alpha':'alpha' };
+  for(const [id,key] of Object.entries(fields))$(id).addEventListener('change',()=>{
+    const c=configFromInputs();c[key]=Number($(id).value);putConfig(c);syncFullscreenControls();scheduleRefresh();
+  });
+  $('dialog-mode-single').addEventListener('click',()=>setFullscreenMode('single'));
+  $('dialog-mode-compare').addEventListener('click',()=>setFullscreenMode('compare'));
+}
 function bindDetailControls(){
   const local=()=>{refreshExperiment({preserveStep:true});};
   let wheelTimer;
@@ -372,15 +401,15 @@ function bindDetailControls(){
   $('zoom-in').addEventListener('click',()=>viewAction(()=>zoomCamera(0.8)));
   $('zoom-out').addEventListener('click',()=>viewAction(()=>zoomCamera(1.25)));
   const scene=$('scene-view'),home=document.createComment('scene home'),dialog=$('terrain-dialog');
-  scene.before(home);
+  scene.before(home);bindFullscreenControls();
   $('expand-scene').addEventListener('click',()=>{
-    $('dialog-scene').append(scene);$('expand-scene').hidden=true;
+    syncFullscreenControls();$('dialog-scene').append(scene);$('expand-scene').hidden=true;
     dialog.showModal();document.body.classList.add('scene-expanded');
-    requestAnimationFrame(()=>resizeSurface());
+    requestAnimationFrame(()=>setFullscreenMode(fullscreenMode));
   });
   $('close-scene').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('close',()=>{
-    home.after(scene);$('expand-scene').hidden=false;document.body.classList.remove('scene-expanded');
+    home.after(scene);scene.hidden=false;$('dialog-single-controls').hidden=false;$('expand-scene').hidden=false;document.body.classList.remove('scene-expanded');
     requestAnimationFrame(()=>resizeSurface());$('expand-scene').focus();
   });
 }

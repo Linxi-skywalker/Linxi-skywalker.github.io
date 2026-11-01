@@ -23,7 +23,7 @@ const shown=name=>!hidden.has(name);
 let hidden=new Set(),mode='log',runs=[],step=200,first=true;
 let style='mist',focus='all',radius=0.6,samples=false,terrain=buildTerrain();
 let projectedRuns=[];
-let view='3d',lastExperiment,hoverBound=false,hoverFrame=0,hoverPoint=null,requestedFocus='all';
+let view='3d',lastExperiment,hoverBound=false,hoverFrame=0,hoverPoint=null,requestedFocus='all',cameraRevision=0;
 let display={balls:true,trails:true,minima:true,arrows:false},studyTarget='hover',studyRadius=1.2,studySide=1;
 let colorMode='contrast',dragMode='orbit',inspectionInteracting=false;
 const inside=p=>p.x>=terrain.xRange[0]&&p.x<=terrain.xRange[1]&&p.y>=terrain.yRange[0]&&p.y<=terrain.yRange[1];
@@ -77,7 +77,7 @@ function topLayout(){
   const right=style==='science'?75:25;
   const el=byId('surface'),w=Math.max(1,el.clientWidth-55-right),h=Math.max(1,el.clientHeight-103);
   const xd=w>h?[(1-h/w)/2,(1+h/w)/2]:[0,1],yd=h>w?[(1-w/h)/2,(1+w/h)/2]:[0,1];
-  return {margin:{l:55,r:right,t:55,b:48},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#FAFCFF',font,showlegend:false,uirevision:`top-${focus}-${radius}`,xaxis:{...axis,range:terrain.xRange,domain:xd,title:{text:'w₁',font:{...font,size:12}}},yaxis:{...axis,range:terrain.yRange,domain:yd,title:{text:'w₂',font:{...font,size:12}},scaleanchor:'x',scaleratio:1},dragmode:'pan',hovermode:'closest',hoverdistance:25,hoverlabel:{bgcolor:'#fff',font:{...font,color:ink,size:12}}};
+  return {margin:{l:55,r:right,t:55,b:48},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#FAFCFF',font,showlegend:false,uirevision:`top-${focus}-${radius}-${cameraRevision}`,xaxis:{...axis,range:terrain.xRange,domain:xd,title:{text:'w₁',font:{...font,size:12}}},yaxis:{...axis,range:terrain.yRange,domain:yd,title:{text:'w₂',font:{...font,size:12}},scaleanchor:'x',scaleratio:1},dragmode:'pan',hovermode:'closest',hoverdistance:25,hoverlabel:{bgcolor:'#fff',font:{...font,color:ink,size:12}}};
 }
 const surfaceConfig=()=>config;
 const motionData=()=>buildMotionOverlays(runs,step,terrain,{...display,mode,style,hidden},view==='top'?2:3);
@@ -91,7 +91,7 @@ function surfaceLayout(){
   const axis=(title,range)=>({...xyAxis(title),range,tickvals:focus==='all'?[-4,-2,0,2,4]:undefined,nticks:5,tickformat:focus==='all'?undefined:'.3f',showbackground:false,gridcolor:'#D9DFE8'});
   const minima=display.minima?getMinima().filter(inside):[];
   const narrow=byId('surface').clientWidth<600;
-  return {margin:{l:5,r:style==='science'?60:5,t:0,b:0},paper_bgcolor:'rgba(0,0,0,0)',font,showlegend:false,uirevision:`atlas-${focus}-${radius}-${mode}`,scene:{bgcolor:'rgba(0,0,0,0)',xaxis:axis('w₁',terrain.xRange),yaxis:axis('w₂',terrain.yRange),zaxis:{...axis(mode==='log'?(getObjective().signed?'signed log(1+|L|)':'log(1 + L)'):'L',terrain.zRange),tickvals:undefined,tickformat:focus==='all'?undefined:'.3g'},aspectmode:'manual',aspectratio:{x:1,y:1,z:0.65},camera:camera3d,dragmode:dragMode,annotations:minima.map((p,i)=>({x:p.x,y:p.y,z:lift(),text:focus==='all'?`${p.id} · L=${getObjective().minimumValue.toPrecision(5)}`:`全局最小值<br>(${p.x.toFixed(4)}, ${p.y.toFixed(4)})<br>L = ${getObjective().minimumValue.toPrecision(5)}`,showarrow:true,arrowhead:0,arrowcolor:'#8A9DB7',ax:focus==='all'?[30,-45,40,-35][i]*(narrow?0.6:1):narrow?0:-100,ay:focus==='all'?[-35,30,30,-35][i]:narrow?65:40,bgcolor:'#FFFFFFEB',bordercolor:'#D9E2EE',borderpad:5,font:{size:focus==='all'||narrow?10:12,color:ink}}))},hoverlabel:{bgcolor:'#fff',font:{...font,color:ink,size:12},bordercolor:'#D6DFEB'}};
+  return {margin:{l:5,r:style==='science'?60:5,t:0,b:0},paper_bgcolor:'rgba(0,0,0,0)',font,showlegend:false,uirevision:`atlas-${focus}-${radius}-${mode}-${cameraRevision}`,scene:{bgcolor:'rgba(0,0,0,0)',xaxis:axis('w₁',terrain.xRange),yaxis:axis('w₂',terrain.yRange),zaxis:{...axis(mode==='log'?(getObjective().signed?'signed log(1+|L|)':'log(1 + L)'):'L',terrain.zRange),tickvals:undefined,tickformat:focus==='all'?undefined:'.3g'},aspectmode:'manual',aspectratio:{x:1,y:1,z:0.65},camera:camera3d,dragmode:dragMode,annotations:minima.map((p,i)=>({x:p.x,y:p.y,z:lift(),text:focus==='all'?`${p.id} · L=${getObjective().minimumValue.toPrecision(5)}`:`全局最小值<br>(${p.x.toFixed(4)}, ${p.y.toFixed(4)})<br>L = ${getObjective().minimumValue.toPrecision(5)}`,showarrow:true,arrowhead:0,arrowcolor:'#8A9DB7',ax:focus==='all'?[30,-45,40,-35][i]*(narrow?0.6:1):narrow?0:-100,ay:focus==='all'?[-35,30,30,-35][i]:narrow?65:40,bgcolor:'#FFFFFFEB',bordercolor:'#D9E2EE',borderpad:5,font:{size:focus==='all'||narrow?10:12,color:ink}}))},hoverlabel:{bgcolor:'#fff',font:{...font,color:ink,size:12},bordercolor:'#D6DFEB'}};
 }
 function miniHeadTrace(run,i){const trace=pathTrace(run,i,2,true);trace.visible=shown(run.name);trace.marker.size=display.balls?10:7;return trace;}
 function contourData(experiment){
@@ -176,7 +176,9 @@ function updateOverview(){
   el.innerHTML=`<span>全程轨迹 <small>t ≤ ${step}</small></span><svg viewBox="0 0 160 140" aria-label="所选优化器的完整轨迹总览"><defs><clipPath id="overview-clip"><rect x="20" y="13" width="120" height="120"/></clipPath></defs><rect x="20" y="13" width="120" height="120" rx="3" fill="#F2F6FB"/><g clip-path="url(#overview-clip)">${paths}${minima}${p?`<circle cx="${px(p.x)}" cy="${py(p.y)}" r="${Math.max(5,radius*11.5)}" fill="none" stroke="#18243B" stroke-width="1" stroke-dasharray="3 2"/>`:''}</g></svg>`;
 }
 export function setCamera(target){
-  return Plotly.relayout(byId('surface'),target==='top'?{'xaxis.range':terrain.xRange,'yaxis.range':terrain.yRange}:{'scene.camera':camera3d});
+  cameraRevision++;
+  const layout=target==='top'?topLayout():surfaceLayout();
+  return Plotly.react(byId('surface'),mainData(),layout,surfaceConfig());
 }
 export function setInteractionMode(target){
   dragMode=target;

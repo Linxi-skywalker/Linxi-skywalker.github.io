@@ -340,12 +340,25 @@ output { color: var(--accent); font: 12px var(--mono); }
 .noscript { padding: 20px; text-align: center; }
 
 /* Focus mode: the same controls, a larger canvas. */
-.terrain-dialog { width: calc(100vw - 40px); height: calc(100dvh - 36px); max-width: 1600px; max-height: none; border: 1px solid hsl(235 22% 85.7%); border-radius: 20px; background: white; color: var(--ink); padding: 0; overflow: auto; }
+.terrain-dialog { width: calc(100vw - 40px); height: calc(100dvh - 36px); max-width: 1600px; max-height: none; border: 1px solid hsl(235 22% 85.7%); border-radius: 20px; background: white; color: var(--ink); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.terrain-dialog:not([open]) { display: none; }
 .terrain-dialog::backdrop { background: #25263b60; backdrop-filter: blur(8px); }
 .dialog-header { height: 70px; padding: 17px 26px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .dialog-header .chapter { font-size: 8px; letter-spacing: 1.5px; }
 .dialog-header h2 { font-size: 17px; font-weight: 500; margin: 1px 0 0; }
-#dialog-scene { height: calc(100% - 70px); }
+.dialog-modebar { display: flex; align-items: center; gap: 18px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: #fbfbfe; flex: none; }
+.dialog-mode-switch { display: flex; gap: 3px; padding: 3px; background: var(--soft); border-radius: 10px; flex: none; }
+.dialog-mode-switch button { min-height: 31px; padding: 5px 13px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 11px; }
+.dialog-mode-switch button.selected { background: #fff; color: var(--ink); box-shadow: 0 1px 4px #25263b14; }
+.dialog-single-controls { display: flex; align-items: end; gap: 10px; min-width: 0; flex: 1; flex-wrap: wrap; }
+.dialog-single-controls > label, .dialog-advanced label { display: flex; flex-direction: column; gap: 4px; min-width: 100px; color: var(--muted); font-size: 9px; }
+.dialog-single-controls > label:first-child { min-width: 130px; }
+.dialog-single-controls input, .dialog-single-controls select, .dialog-advanced input { min-height: 32px; padding: 5px 8px; font-size: 11px; }
+.dialog-advanced { position: relative; align-self: center; }
+.dialog-advanced summary { min-height: 32px; display: flex; align-items: center; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); font-size: 10px; white-space: nowrap; }
+.dialog-advanced[open] { z-index: 10; }
+.dialog-advanced > div { position: absolute; right: 0; top: 38px; display: grid; grid-template-columns: repeat(2,minmax(110px,1fr)); gap: 10px; width: 280px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 10px 30px #25263b20; }
+#dialog-scene { flex: 1; min-height: 0; position: relative; overflow: hidden; }
 .terrain-dialog .scene-column { min-height: 100%; height: 100%; }
 .terrain-dialog .canvas-header { padding-block: 12px; }
 .terrain-dialog .optimizer-picker { padding-bottom: 10px; }
@@ -358,6 +371,22 @@ output { color: var(--accent); font: 12px var(--mono); }
 .terrain-dialog .playback { padding-top: 10px; grid-template-columns: auto minmax(100px, 1fr) 210px; }
 .terrain-dialog .hover-inspector.is-pinned { margin-top: 60px; margin-bottom: 30px; }
 .terrain-dialog .is-pinned .inspection-scene { height: clamp(140px, calc(100dvh - 570px), 300px); }
+.fullscreen-compare { width: 100%; height: 100%; min-height: 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 14px; overflow: auto; }
+.compare-card { --method-color: var(--accent); min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 4px 20px #25263b07; }
+.compare-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 2px 10px; }
+.compare-card-heading span { color: var(--muted); font-size: 8px; letter-spacing: 1.4px; }
+.compare-card-heading h3 { margin: 1px 0 0; color: var(--method-color); font-size: 17px; line-height: 1.3; }
+.compare-card-heading select { width: 135px; min-height: 32px; font-size: 10px; }
+.compare-controls { display: grid; grid-template-columns: repeat(4,minmax(72px,1fr)); gap: 8px; }
+.compare-controls label, .compare-hyperparams label { display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--muted); font-size: 9px; }
+.compare-controls input, .compare-hyperparams input { min-height: 31px; padding: 5px 7px; font-size: 10px; }
+.compare-advanced { flex: none; margin-top: 8px; }
+.compare-advanced summary { width: max-content; color: #6978a1; font-size: 9px; }
+.compare-advanced summary small { margin-left: 6px; color: #929bb0; }
+.compare-hyperparams { display: grid; grid-template-columns: repeat(4,minmax(80px,1fr)); gap: 7px; padding: 8px 0 2px; }
+.compare-chart { flex: 1; min-height: 180px; width: 100%; }
+.compare-result { margin: 5px 2px 0; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font: 10px/1.6 var(--mono); }
+.compare-result[data-error="true"] { color: #b74852; }
 .scene-expanded { overflow: hidden; }
 
 @media (min-width: 1500px) {
@@ -521,12 +550,22 @@ output { color: var(--accent); font: 12px var(--mono); }
   .dialog-header { padding: 13px 16px; height: 65px; }
   .dialog-header h2 { font-size: 15px; }
   .dialog-header .chapter { font-size: 7px; }
-  #dialog-scene { height: auto; }
-  .terrain-dialog .scene-column { height: auto; }
-  .terrain-dialog .surface-plot, .terrain-dialog .has-study .surface-plot { height: 380px; }
+  .terrain-dialog { overflow: hidden; }
+  .dialog-modebar { align-items: start; gap: 8px; padding: 9px 10px; flex-wrap: wrap; }
+  .dialog-single-controls { display: grid; grid-template-columns: repeat(3,minmax(80px,1fr)); gap: 7px; }
+  .dialog-single-controls > label, .dialog-single-controls > label:first-child { min-width: 0; }
+  .dialog-advanced { grid-column: 1 / -1; }
+  .dialog-advanced > div { left: 0; right: auto; }
+  #dialog-scene { flex: 1; min-height: 0; height: auto; overflow: auto; }
+  .terrain-dialog .scene-column { height: 100%; }
+  .terrain-dialog .surface-plot, .terrain-dialog .has-study .surface-plot { height: 100%; min-height: 300px; }
   .terrain-dialog .playback { grid-template-columns: auto minmax(0, 1fr); }
   .terrain-dialog .hover-inspector.is-pinned { margin: 0 14px 16px; }
   .terrain-dialog .is-pinned .inspection-scene { height: 235px; }
+  .fullscreen-compare { grid-template-columns: 1fr; padding: 9px; }
+  .compare-card { min-height: 540px; }
+  .compare-controls { grid-template-columns: repeat(2,minmax(72px,1fr)); }
+  .compare-hyperparams { grid-template-columns: repeat(2,minmax(75px,1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

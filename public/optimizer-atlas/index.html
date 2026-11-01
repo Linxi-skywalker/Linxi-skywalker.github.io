@@ -131,7 +131,15 @@
   </main>
   <footer class="site-footer page-width"><div><img class="brand-mark" src="favicon.svg" alt=""><span>OPTIMIZER ATLAS <small>把抽象的算法，变成可以探索的风景。</small></span></div><p>课程问题 36 · Himmelblau 函数<br><a href="https://distill.pub/2021/gnn-intro/" target="_blank" rel="noopener">交互表达灵感：Distill ↗</a> <span> / </span> <a href="https://docs.pytorch.org/docs/stable/optim.html" target="_blank" rel="noopener">算法定义：PyTorch ↗</a></p></footer>
   <div id="toast" class="toast" role="status" hidden></div>
-  <dialog id="terrain-dialog" class="terrain-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><div><span class="chapter">HIMMELBLAU / DETAIL STUDY</span><h2 id="dialog-title">把每一步，看得更清楚。</h2></div><button id="close-scene" class="expand-button" aria-label="关闭大图">关闭 ×</button></div><div id="dialog-scene"></div></dialog>
+  <dialog id="terrain-dialog" class="terrain-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><div><span class="chapter">HIMMELBLAU / DETAIL STUDY</span><h2 id="dialog-title">把每一步，看得更清楚。</h2></div><button id="close-scene" class="expand-button" aria-label="关闭大图">关闭 ×</button></div><div id="dialog-modebar" class="dialog-modebar">
+  <div class="dialog-mode-switch" role="group" aria-label="全屏显示模式"><button id="dialog-mode-single" class="selected" aria-pressed="true">单图</button><button id="dialog-mode-compare" aria-pressed="false">左右对比</button></div>
+  <div id="dialog-single-controls" class="dialog-single-controls">
+    <label>优化器<select id="dialog-method"><option value="all">全部对比</option><option value="SGD">SGD</option><option value="Momentum">Momentum</option><option value="RMSprop">RMSprop</option><option value="Adam">Adam</option></select></label>
+    <label>学习率 η<input id="dialog-lr" type="number" min="0.0001" max="0.1" step="any"></label><label>起点 w₁<input id="dialog-x" type="number" min="-5" max="5" step="0.1"></label><label>起点 w₂<input id="dialog-y" type="number" min="-5" max="5" step="0.1"></label><label>更新步数<input id="dialog-iterations" type="number" min="1" max="1000" step="1"></label>
+    <details class="dialog-advanced"><summary>算法超参数</summary><div><label>Momentum μ<input id="dialog-momentum" type="number" min="0" max="0.99" step="0.01"></label><label>Adam β₁<input id="dialog-beta1" type="number" min="0" max="0.99" step="0.01"></label><label>Adam β₂<input id="dialog-beta2" type="number" min="0.9" max="0.9999" step="0.0001"></label><label>RMSprop α<input id="dialog-alpha" type="number" min="0.8" max="0.999" step="0.001"></label></div></details>
+  </div>
+</div>
+<div id="dialog-scene"><div id="fullscreen-compare" class="fullscreen-compare" hidden></div></div></dialog>
   <noscript><p class="noscript">请启用 JavaScript，以运行优化器和交互图形。</p></noscript>
 </body>
 </html>
