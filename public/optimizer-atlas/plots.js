@@ -1,4 +1,4 @@
-import {loss, METHODS, getMinima, getObjective, displayHeight} from './engine.js';
+import {loss, gradient, METHODS, getMinima, getObjective, displayHeight} from './engine.js';
 import {buildTerrain,projectPath,clipPath,refineDisplayPath} from './terrain.js';
 import {resolveRegion,fillInspection,cancelInspection} from './inspection.js';
 import {spectrum,sciencePaths,scienceColorMapping} from './palette.js';
@@ -26,7 +26,39 @@ let projectedRuns=[];
 let view='3d',lastExperiment,hoverBound=false,hoverFrame=0,hoverPoint=null,requestedFocus='all',cameraRevision=0;
 let display={balls:true,trails:true,minima:true,arrows:false},studyTarget='hover',studyRadius=1.2,studySide=1;
 let colorMode='contrast',dragMode='orbit',inspectionInteracting=false;
+let criticalMode='all',criticalCustom={x:0,y:0};
+const HIMMELBLAU_STATIONARY=[
+  {kind:'saddle',id:'S₁',x:3.385154184,y:0.073851880,loss:13.311926270},
+  {kind:'saddle',id:'S₂',x:0.086677505,y:2.884254701,loss:67.719150088},
+  {kind:'maximum',id:'M',x:-0.270844591,y:-0.923038556,loss:181.616521523}
+];
 const inside=p=>p.x>=terrain.xRange[0]&&p.x<=terrain.xRange[1]&&p.y>=terrain.yRange[0]&&p.y<=terrain.yRange[1];
+
+function selectedStationary(kind){
+  if(getObjective().kind!=='himmelblau')return [];
+  if(criticalMode==='all')return HIMMELBLAU_STATIONARY.filter(p=>p.kind===kind&&inside(p));
+  if(criticalMode===kind)return HIMMELBLAU_STATIONARY.filter(p=>p.kind===kind&&inside(p));
+  return [];
+}
+function classifyCustom(x,y){
+  const g=gradient(x,y),norm=Math.hypot(...g),h=1e-4,gxp=gradient(x+h,y),gxm=gradient(x-h,y),gyp=gradient(x,y+h),gym=gradient(x,y-h),hxx=(gxp[0]-gxm[0])/(2*h),hyy=(gyp[1]-gym[1])/(2*h),hxy=((gxp[1]-gxm[1])+(gyp[0]-gym[0]))/(4*h),det=hxx*hyy-hxy*hxy,trace=hxx+hyy;
+  const type=norm>1e-3?'非驻点':det<0?'鞍点':det>0&&trace<0?'局部极大点':det>0?'局部极小点':'退化驻点';
+  return {kind:'custom',id:'自选',x,y,loss:loss(x,y),gradNorm:norm,type};
+}
+function stationaryTraces(dimension){
+  const custom=criticalMode==='custom'&&Number.isFinite(criticalCustom.x)&&Number.isFinite(criticalCustom.y)&&Math.abs(criticalCustom.x)<=5&&Math.abs(criticalCustom.y)<=5?[classifyCustom(criticalCustom.x,criticalCustom.y)]:[];
+  const groups=[
+    {kind:'saddle',name:'已知鞍点',points:selectedStationary('saddle'),color:'#D45D5D',symbol:'diamond'},
+    {kind:'maximum',name:'局部极大点',points:selectedStationary('maximum'),color:'#8466B6',symbol:'square'},
+    {kind:'custom',name:'自选坐标',points:custom,color:'#218C91',symbol:'circle'}
+  ];
+  return groups.map(group=>{
+    const points=group.points;
+    const is3d=dimension===3;
+    const displayName=group.kind==='custom'&&points[0]?`${points[0].type} · 自选坐标` : group.name;
+    return {type:is3d?'scatter3d':'scatter',mode:'markers+text',name:displayName,x:points.map(p=>p.x),y:points.map(p=>p.y),...(is3d?{z:points.map(p=>height(p.loss,mode)+lift()*4)}:{}),text:points.map(p=>p.id),customdata:points.map(p=>[p.loss,p.gradNorm??Math.hypot(...gradient(p.x,p.y)),p.type??(p.kind==='saddle'?'鞍点':'局部极大点')]),textposition:'top center',textfont:{color:group.color,size:11},marker:{size:is3d?7:10,symbol:group.symbol,color:group.color,line:{color:'#fff',width:1.5}},showlegend:false,hovertemplate:'<b>%{customdata[2]} · %{text}</b><br>w₁ = %{x:.6f}<br>w₂ = %{y:.6f}<br>L = %{customdata[0]:.8g}<br>‖∇L‖ = %{customdata[1]:.3g}<extra></extra>'};
+  });
+}
 
 function pathTrace(run,i,dimension,head=false,kind='line') {
   const pts=run.points.filter(p=>p.t<=step);
@@ -84,7 +116,7 @@ const motionData=()=>buildMotionOverlays(runs,step,terrain,{...display,mode,styl
 function mainData(){
   const data=(view==='top'?topData(lastExperiment):surfaceData(lastExperiment)).map(trace=>({...trace,hovertemplate:null,hoverinfo:'none'}));
   data[1].visible=display.minima;
-  return [...data,...motionData(),studyFrame()];
+  return [...data,...motionData(),studyFrame(),...stationaryTraces(view==='top'?2:3)];
 }
 const mainLayout=()=>view==='top'?topLayout():surfaceLayout();
 function surfaceLayout(){
@@ -100,7 +132,7 @@ function contourData(experiment){
     {type:'contour',x:grid,y:grid,z:logarithmic,colorscale:contourColors,showscale:false,ncontours:18,contours:{coloring:'heatmap',showlabels:false},line:{width:0.6,color:'#C4D4E4'},hovertemplate:'w₁ = %{x:.2f}<br>w₂ = %{y:.2f}<extra>点击设置起点</extra>',showlegend:false},
     {type:'scatter',mode:'markers+text',x:getMinima().map(p=>p.x),y:getMinima().map(p=>p.y),text:getMinima().map(p=>p.id),textposition:'bottom right',textfont:{color:'#6F91AF',size:10},name:'全局谷底',marker:{symbol:'diamond',size:7,color:'#6F91AF',line:{color:'#fff',width:1}},showlegend:false,visible:display.minima,hovertemplate:'谷底 %{text}<br>(%{x:.3f}, %{y:.3f})<extra></extra>'},
     {type:'scatter',mode:'markers',x:[x],y:[y],name:'共同起点',marker:{size:7,color:ink,line:{color:'#fff',width:1.5}},showlegend:false,hovertemplate:'共同起点 (%{x:.2f}, %{y:.2f})<extra></extra>'},
-    ...runs.map((r,i)=>pathTrace(r,i,2)),...runs.map((r,i)=>miniHeadTrace(r,i))
+    ...runs.map((r,i)=>pathTrace(r,i,2)),...runs.map((r,i)=>miniHeadTrace(r,i)),...stationaryTraces(2)
   ];
 }
 const axis2d={tickfont:{...font,size:9},gridcolor:'#EBEFF5',zeroline:false,ticks:'',showline:false,fixedrange:true};
@@ -119,6 +151,7 @@ export async function renderPlots(experiment,options={}) {
   colorMode=options.colorMode??colorMode;dragMode=options.dragMode??dragMode;
   mode=options.heightMode??mode;style=options.surfaceStyle??style;radius=options.radius??radius;samples=options.samples??samples;
   display={...display,...options.display};
+  criticalMode=options.criticalMode??criticalMode;criticalCustom=options.criticalCustom??criticalCustom;
   if(options.studyTarget&&options.studyTarget!==studyTarget)studySide=options.studyTarget==='A'?-1:1;
   studyTarget=options.studyTarget??studyTarget;studyRadius=options.studyRadius??studyRadius;
   byId('scene-view').classList.toggle('has-study',studyTarget!=='hover');

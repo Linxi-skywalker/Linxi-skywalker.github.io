@@ -1,5 +1,5 @@
 import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION} from './engine.js';
-import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js';
+import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js?v=20261102-1';
 import {resolveRegion} from './inspection.js';
 import {createFullscreenCompare} from './fullscreen-compare.js?v=20261101-2';
 
@@ -141,7 +141,7 @@ async function refreshExperiment({preserveStep=false}={}){
     updateFocusNote();
     syncTimeline();updateResults();notices();
     hideInspection();
-    await renderPlots(experiment,{heightMode:$('height-mode').value,colorMode:$('color-mode').value||'contrast',dragMode,step:current,surfaceStyle,focus:$('focus-region').value||'all',radius:Number($('focus-radius').value)||0.6,samples:$('path-samples').checked,viewMode:top?'top':'3d',display:{balls:$('marker-mode').value!=='point',trails:$('show-trails').checked!==false,minima:$('show-minima').checked!==false,arrows:$('show-arrows').checked===true},studyTarget:$('study-target').value||'hover',studyRadius:Number($('study-radius').value)||1.2});
+    await renderPlots(experiment,{heightMode:$('height-mode').value,colorMode:$('color-mode').value||'contrast',dragMode,step:current,surfaceStyle,focus:$('focus-region').value||'all',radius:Number($('focus-radius').value)||0.6,samples:$('path-samples').checked,viewMode:top?'top':'3d',display:{balls:$('marker-mode').value!=='point',trails:$('show-trails').checked!==false,minima:$('show-minima').checked!==false,arrows:$('show-arrows').checked===true},studyTarget:$('study-target').value||'hover',studyRadius:Number($('study-radius').value)||1.2,criticalMode:$('critical-mode').value,criticalCustom:{x:$('critical-x').value.trim()===''?NaN:Number($('critical-x').value),y:$('critical-y').value.trim()===''?NaN:Number($('critical-y').value)}});
     $('plot-loading').hidden=true;
   }catch(error){
     if(!(error instanceof RangeError))console.error(error);$('parameter-error').textContent=error instanceof RangeError?error.message:'图形未能加载，请确认浏览器支持 WebGL 并刷新页面。';$('parameter-error').hidden=false;
@@ -181,6 +181,20 @@ function syncViewControls(){
   $('camera-orbit').setAttribute('aria-pressed',String(!top&&dragMode==='orbit'));
   $('camera-pan').setAttribute('aria-pressed',String(top||dragMode==='pan'));
   $('view-control-status').textContent=top||dragMode==='pan'?'拖动画面平移 · 滚轮缩放':'拖动画面旋转 · 滚轮缩放';
+}
+function setPlotMode(mode){
+  const valid=['surface','loss','both'].includes(mode)?mode:'surface';
+  const scene=$('scene-view');
+  scene.classList.toggle('plot-mode-loss',valid==='loss');
+  scene.classList.toggle('plot-mode-both',valid==='both');
+  for(const [key,id] of [['surface','plot-mode-surface'],['loss','plot-mode-loss'],['both','plot-mode-both']]){
+    $(id).classList.toggle('selected',key===valid);
+    $(id).setAttribute('aria-pressed',String(key===valid));
+  }
+  requestAnimationFrame(()=>{
+    if(window.Plotly)for(const id of ['surface','loss-chart']){const plot=$(id);if(plot?.data)Plotly.Plots.resize(plot);}
+    resizeSurface();
+  });
 }
 async function viewAction(action){
   if(rendering)return;
@@ -249,6 +263,12 @@ function syncFunctionUI(){
   if(fn.kind==='preset'&&minima.length){const option=document.createElement('option');option.value='G';option.textContent='全局最小值';focus.append(option);}
   document.querySelectorAll('#study-target option').forEach(option=>{if(['A','B','C','D','G'].includes(option.value))option.disabled=custom||!minima.some(p=>p.id===option.value);});
   $('loss-scale-label').textContent=custom||fn.signed?'线性刻度 · 保留负值':'纵轴对数刻度';
+  for(const option of $('critical-mode').options)if(['all','saddle','maximum'].includes(option.value))option.disabled=fn.kind!=='himmelblau';
+  if(fn.kind!=='himmelblau'&&['all','saddle','maximum'].includes($('critical-mode').value))$('critical-mode').value='none';
+  const criticalMode=$('critical-mode').value,criticalLegend=$('critical-legend');
+  $('critical-coordinate-fields').hidden=criticalMode!=='custom';
+  criticalLegend.hidden=criticalMode==='none'||(fn.kind!=='himmelblau'&&criticalMode!=='custom');
+  criticalLegend.innerHTML=criticalMode==='custom'?'<span class="critical-key custom-key">●</span> 自选坐标':criticalMode==='saddle'?'<span class="critical-key saddle-key">◆</span> S₁ / S₂ 鞍点':criticalMode==='maximum'?'<span class="critical-key maximum-key">■</span> M 局部极大点':'<span class="critical-key saddle-key">◆</span> S₁ / S₂ 鞍点 <span class="critical-key maximum-key">■</span> M 局部极大点';
   $('criteria-description').textContent=custom?'自定义函数：‖∇L‖ < 10⁻³ 记为“梯度足够小”；连续至少 10 个记录点满足且保持到当前步，才记为稳定。驻点可能是鞍点或极大值，全局最优性未验证。损失上升次数衡量爬坡，路径长度在参数平面中计算。':`收敛：|L − ${fn.minimumValue.toPrecision(5)}| < 10⁻⁶ 且 ‖∇L‖ < 10⁻³。稳定：连续至少 10 个记录点满足条件，且保持至当前步。损失上升次数衡量爬坡，不等同于方向震荡。路径长度在参数平面中计算。`;
 }
 async function applyFunction(restore=false){
@@ -301,6 +321,10 @@ function bindControls(){
   syncLossChartLegend();
   bindFunctionControls();
   bindDetailControls();
+  $('plot-mode-surface').addEventListener('click',()=>setPlotMode('surface'));
+  $('plot-mode-loss').addEventListener('click',()=>setPlotMode('loss'));
+  $('plot-mode-both').addEventListener('click',()=>setPlotMode('both'));
+  setPlotMode('surface');
   $('legend').innerHTML=METHODS.map(m=>`<button data-method="${m.name}" aria-label="显示或隐藏 ${m.name} 路径" aria-pressed="true" style="--method-color:${m.color}"><span class="legend-line"></span>${m.name}</button>`).join('');
   $('optimizer-select').addEventListener('change',()=>applyOptimizerSelection($('optimizer-select').value));
   $('legend').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const name=b.dataset.method,on=!visible.has(name);if(!on&&visible.size===1){toast('请至少保留一种优化器，也可以在选择器中切换。');return;}if(on)visible.add(name);else visible.delete(name);syncOptimizerControls();setActiveMethods([...visible]);await refreshExperiment({preserveStep:true});});
@@ -402,6 +426,8 @@ function bindDetailControls(){
   $('focus-region').addEventListener('change',local);$('focus-radius').addEventListener('change',local);
   $('path-samples').addEventListener('change',()=>refreshExperiment({preserveStep:true}));
   for(const id of ['marker-mode','show-trails','show-minima','show-arrows','study-target','study-radius','color-mode'])$(id).addEventListener('change',local);
+  $('critical-mode').addEventListener('change',()=>{const mode=$('critical-mode').value;$('critical-coordinate-fields').hidden=mode!=='custom';local();});
+  for(const id of ['critical-x','critical-y'])$(id).addEventListener('change',local);
   $('inspect-left').addEventListener('click',()=>turnInspection(-1));
   $('inspect-right').addEventListener('click',()=>turnInspection(1));
   $('inspect-close').addEventListener('click',()=>{$('study-target').value='hover';hideInspection();local();});
