@@ -26,10 +26,12 @@ let projectedRuns=[];
 let view='3d',lastExperiment,hoverBound=false,hoverFrame=0,hoverPoint=null,requestedFocus='all',cameraRevision=0;
 let display={balls:true,trails:true,minima:true,arrows:false},studyTarget='hover',studyRadius=1.2,studySide=1;
 let colorMode='contrast',dragMode='orbit',inspectionInteracting=false;
-let criticalMode='all',criticalCustom={x:0,y:0};
+let criticalMode='all';
 const HIMMELBLAU_STATIONARY=[
-  {kind:'saddle',id:'S₁',x:3.385154184,y:0.073851880,loss:13.311926270},
-  {kind:'saddle',id:'S₂',x:0.086677505,y:2.884254701,loss:67.719150088},
+  {kind:'saddle',id:'S₁',x:-3.073025751,y:-0.081353044,loss:104.015162918},
+  {kind:'saddle',id:'S₂',x:-0.127961347,y:-1.953714980,loss:178.337239202},
+  {kind:'saddle',id:'S₃',x:0.086677505,y:2.884254701,loss:67.719150088},
+  {kind:'saddle',id:'S₄',x:3.385154184,y:0.073851880,loss:13.311926270},
   {kind:'maximum',id:'M',x:-0.270844591,y:-0.923038556,loss:181.616521523}
 ];
 const inside=p=>p.x>=terrain.xRange[0]&&p.x<=terrain.xRange[1]&&p.y>=terrain.yRange[0]&&p.y<=terrain.yRange[1];
@@ -38,25 +40,18 @@ function selectedStationary(kind){
   if(getObjective().kind!=='himmelblau')return [];
   if(criticalMode==='all')return HIMMELBLAU_STATIONARY.filter(p=>p.kind===kind&&inside(p));
   if(criticalMode===kind)return HIMMELBLAU_STATIONARY.filter(p=>p.kind===kind&&inside(p));
+  if(kind==='saddle'&&criticalMode.startsWith('S'))return HIMMELBLAU_STATIONARY.filter(p=>p.id===criticalMode&&inside(p));
   return [];
 }
-function classifyCustom(x,y){
-  const g=gradient(x,y),norm=Math.hypot(...g),h=1e-4,gxp=gradient(x+h,y),gxm=gradient(x-h,y),gyp=gradient(x,y+h),gym=gradient(x,y-h),hxx=(gxp[0]-gxm[0])/(2*h),hyy=(gyp[1]-gym[1])/(2*h),hxy=((gxp[1]-gxm[1])+(gyp[0]-gym[0]))/(4*h),det=hxx*hyy-hxy*hxy,trace=hxx+hyy;
-  const type=norm>1e-3?'非驻点':det<0?'鞍点':det>0&&trace<0?'局部极大点':det>0?'局部极小点':'退化驻点';
-  return {kind:'custom',id:'自选',x,y,loss:loss(x,y),gradNorm:norm,type};
-}
 function stationaryTraces(dimension){
-  const custom=criticalMode==='custom'&&Number.isFinite(criticalCustom.x)&&Number.isFinite(criticalCustom.y)&&Math.abs(criticalCustom.x)<=5&&Math.abs(criticalCustom.y)<=5?[classifyCustom(criticalCustom.x,criticalCustom.y)]:[];
   const groups=[
     {kind:'saddle',name:'已知鞍点',points:selectedStationary('saddle'),color:'#D45D5D',symbol:'diamond'},
-    {kind:'maximum',name:'局部极大点',points:selectedStationary('maximum'),color:'#8466B6',symbol:'square'},
-    {kind:'custom',name:'自选坐标',points:custom,color:'#218C91',symbol:'circle'}
+    {kind:'maximum',name:'局部极大点',points:selectedStationary('maximum'),color:'#8466B6',symbol:'square'}
   ];
   return groups.map(group=>{
     const points=group.points;
     const is3d=dimension===3;
-    const displayName=group.kind==='custom'&&points[0]?`${points[0].type} · 自选坐标` : group.name;
-    return {type:is3d?'scatter3d':'scatter',mode:'markers+text',name:displayName,x:points.map(p=>p.x),y:points.map(p=>p.y),...(is3d?{z:points.map(p=>height(p.loss,mode)+lift()*4)}:{}),text:points.map(p=>p.id),customdata:points.map(p=>[p.loss,p.gradNorm??Math.hypot(...gradient(p.x,p.y)),p.type??(p.kind==='saddle'?'鞍点':'局部极大点')]),textposition:'top center',textfont:{color:group.color,size:11},marker:{size:is3d?7:10,symbol:group.symbol,color:group.color,line:{color:'#fff',width:1.5}},showlegend:false,hovertemplate:'<b>%{customdata[2]} · %{text}</b><br>w₁ = %{x:.6f}<br>w₂ = %{y:.6f}<br>L = %{customdata[0]:.8g}<br>‖∇L‖ = %{customdata[1]:.3g}<extra></extra>'};
+    return {type:is3d?'scatter3d':'scatter',mode:'markers+text',name:group.name,x:points.map(p=>p.x),y:points.map(p=>p.y),...(is3d?{z:points.map(p=>height(p.loss,mode)+lift()*4)}:{}),text:points.map(p=>p.id),customdata:points.map(p=>[p.loss,Math.hypot(...gradient(p.x,p.y)),p.kind==='saddle'?'鞍点':'局部极大点']),textposition:'top center',textfont:{color:group.color,size:11},marker:{size:is3d?7:10,symbol:group.symbol,color:group.color,line:{color:'#fff',width:1.5}},showlegend:false,hovertemplate:'<b>%{customdata[2]} · %{text}</b><br>w₁ = %{x:.6f}<br>w₂ = %{y:.6f}<br>L = %{customdata[0]:.8g}<br>‖∇L‖ = %{customdata[1]:.3g}<extra></extra>'};
   });
 }
 
@@ -151,7 +146,7 @@ export async function renderPlots(experiment,options={}) {
   colorMode=options.colorMode??colorMode;dragMode=options.dragMode??dragMode;
   mode=options.heightMode??mode;style=options.surfaceStyle??style;radius=options.radius??radius;samples=options.samples??samples;
   display={...display,...options.display};
-  criticalMode=options.criticalMode??criticalMode;criticalCustom=options.criticalCustom??criticalCustom;
+  criticalMode=options.criticalMode??criticalMode;
   if(options.studyTarget&&options.studyTarget!==studyTarget)studySide=options.studyTarget==='A'?-1:1;
   studyTarget=options.studyTarget??studyTarget;studyRadius=options.studyRadius??studyRadius;
   byId('scene-view').classList.toggle('has-study',studyTarget!=='hover');
@@ -162,6 +157,7 @@ export async function renderPlots(experiment,options={}) {
   await Promise.all([
     Plotly[fn](byId('surface'),mainData(),mainLayout(),surfaceConfig()),
     Plotly[fn](byId('contour'),contourData(experiment),contourLayout(),miniConfig),
+    Plotly[fn](byId('loss-chart-main'),lossData(),lossLayout(experiment),miniConfig),
     Plotly[fn](byId('loss-chart'),lossData(),lossLayout(experiment),miniConfig)
   ]);
   first=false;
@@ -185,6 +181,7 @@ export async function updateStep(t){
   await Promise.all([
     Plotly.restyle(byId('surface'),data,allIndices),
     Plotly.restyle(byId('contour'),{x:mapTraces.map(p=>p.x),y:mapTraces.map(p=>p.y),customdata:mapTraces.map(p=>p.customdata),text:mapTraces.map(p=>p.text),visible:mapTraces.map(p=>p.visible)},runs.flatMap((r,i)=>[3+i,7+i])),
+    Plotly.relayout(byId('loss-chart-main'),{'shapes[0].x0':t,'shapes[0].x1':t}),
     Plotly.relayout(byId('loss-chart'),{'shapes[0].x0':t,'shapes[0].x1':t})
   ]);
   await refreshStudy();
@@ -195,6 +192,7 @@ export async function setVisibility(name,visible){
   await Promise.all([
     Plotly.restyle(byId('surface'),{visible:[visible,visible,visible&&samples]},[3+i,7+i,11+i]),
     Plotly.restyle(byId('contour'),{visible},[3+i,7+i]),
+    Plotly.restyle(byId('loss-chart-main'),{visible},[i]),
     Plotly.restyle(byId('loss-chart'),{visible},[i])
   ]);
 }

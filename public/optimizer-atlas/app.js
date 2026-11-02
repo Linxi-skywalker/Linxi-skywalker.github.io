@@ -1,5 +1,5 @@
 import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION} from './engine.js';
-import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js?v=20261102-1';
+import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js?v=20261102-2';
 import {resolveRegion} from './inspection.js';
 import {createFullscreenCompare} from './fullscreen-compare.js?v=20261101-2';
 
@@ -28,7 +28,7 @@ function putConfig(c){
   for(const key of ['momentum','beta1','beta2','alpha']) $(key).value=c[key];
   syncStartPreset();updateLabels();
 }
-function syncStartPreset(){const value=`${Number($('start-x').value)},${Number($('start-y').value)}`;const opts=Array.from($('start-preset').options).map(o=>o.value);$('start-preset').value=opts.includes(value)?value:'custom';}
+function syncStartPreset(){const value=`${Number($('start-x').value)},${Number($('start-y').value)}`;const opts=Array.from($('start-preset').options).map(o=>o.value);$('start-preset').value=opts.includes(value)?value:'custom';$('start-coordinate-fields').hidden=$('start-preset').value!=='custom';}
 function stopPlayback(){playing=false;playVersion++;cancelAnimationFrame(frame);$('play-icon').textContent='▶';$('play-label').textContent='播放';$('play').setAttribute('aria-label','播放路径');}
 function toast(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4000);}
 
@@ -40,9 +40,8 @@ function syncOptimizerControls(){
   syncLossChartLegend();
 }
 function syncLossChartLegend(){
-  const legend=$('loss-legend');
-  if(!legend)return;
-  legend.innerHTML=METHODS.filter(method=>visible.has(method.name)).map(method=>`<span class="loss-legend-item" style="--method-color:${method.color}"><i aria-hidden="true"></i>${method.name}</span>`).join('');
+  const contents=METHODS.filter(method=>visible.has(method.name)).map(method=>`<span class="loss-legend-item" style="--method-color:${method.color}"><i aria-hidden="true"></i>${method.name}</span>`).join('');
+  for(const id of ['loss-legend','loss-legend-main'])if($(id))$(id).innerHTML=contents;
 }
 async function applyOptimizerSelection(choice){
   const names=choice==='all'?METHODS.map(m=>m.name):[choice];
@@ -141,7 +140,7 @@ async function refreshExperiment({preserveStep=false}={}){
     updateFocusNote();
     syncTimeline();updateResults();notices();
     hideInspection();
-    await renderPlots(experiment,{heightMode:$('height-mode').value,colorMode:$('color-mode').value||'contrast',dragMode,step:current,surfaceStyle,focus:$('focus-region').value||'all',radius:Number($('focus-radius').value)||0.6,samples:$('path-samples').checked,viewMode:top?'top':'3d',display:{balls:$('marker-mode').value!=='point',trails:$('show-trails').checked!==false,minima:$('show-minima').checked!==false,arrows:$('show-arrows').checked===true},studyTarget:$('study-target').value||'hover',studyRadius:Number($('study-radius').value)||1.2,criticalMode:$('critical-mode').value,criticalCustom:{x:$('critical-x').value.trim()===''?NaN:Number($('critical-x').value),y:$('critical-y').value.trim()===''?NaN:Number($('critical-y').value)}});
+    await renderPlots(experiment,{heightMode:$('height-mode').value,colorMode:$('color-mode').value||'contrast',dragMode,step:current,surfaceStyle,focus:$('focus-region').value||'all',radius:Number($('focus-radius').value)||0.6,samples:$('path-samples').checked,viewMode:top?'top':'3d',display:{balls:$('marker-mode').value!=='point',trails:$('show-trails').checked!==false,minima:$('show-minima').checked!==false,arrows:$('show-arrows').checked===true},studyTarget:$('study-target').value||'hover',studyRadius:Number($('study-radius').value)||1.2,criticalMode:$('critical-mode').value});
     $('plot-loading').hidden=true;
   }catch(error){
     if(!(error instanceof RangeError))console.error(error);$('parameter-error').textContent=error instanceof RangeError?error.message:'图形未能加载，请确认浏览器支持 WebGL 并刷新页面。';$('parameter-error').hidden=false;
@@ -192,7 +191,7 @@ function setPlotMode(mode){
     $(id).setAttribute('aria-pressed',String(key===valid));
   }
   requestAnimationFrame(()=>{
-    if(window.Plotly)for(const id of ['surface','loss-chart']){const plot=$(id);if(plot?.data)Plotly.Plots.resize(plot);}
+    if(window.Plotly)for(const id of ['surface','loss-chart','loss-chart-main']){const plot=$(id);if(plot?.data)Plotly.Plots.resize(plot);}
     resizeSurface();
   });
 }
@@ -262,13 +261,13 @@ function syncFunctionUI(){
   for(const option of Array.from(focus.options).filter(o=>o.value==='G'))option.remove();
   if(fn.kind==='preset'&&minima.length){const option=document.createElement('option');option.value='G';option.textContent='全局最小值';focus.append(option);}
   document.querySelectorAll('#study-target option').forEach(option=>{if(['A','B','C','D','G'].includes(option.value))option.disabled=custom||!minima.some(p=>p.id===option.value);});
-  $('loss-scale-label').textContent=custom||fn.signed?'线性刻度 · 保留负值':'纵轴对数刻度';
-  for(const option of $('critical-mode').options)if(['all','saddle','maximum'].includes(option.value))option.disabled=fn.kind!=='himmelblau';
-  if(fn.kind!=='himmelblau'&&['all','saddle','maximum'].includes($('critical-mode').value))$('critical-mode').value='none';
+  const lossScale=custom||fn.signed?'线性刻度 · 保留负值':'纵轴对数刻度';
+  $('loss-scale-label').textContent=lossScale;$('loss-scale-label-main').textContent=lossScale;
+  for(const option of $('critical-mode').options)option.disabled=fn.kind!=='himmelblau'&&option.value!=='none';
+  if(fn.kind!=='himmelblau'&&$('critical-mode').value!=='none')$('critical-mode').value='none';
   const criticalMode=$('critical-mode').value,criticalLegend=$('critical-legend');
-  $('critical-coordinate-fields').hidden=criticalMode!=='custom';
-  criticalLegend.hidden=criticalMode==='none'||(fn.kind!=='himmelblau'&&criticalMode!=='custom');
-  criticalLegend.innerHTML=criticalMode==='custom'?'<span class="critical-key custom-key">●</span> 自选坐标':criticalMode==='saddle'?'<span class="critical-key saddle-key">◆</span> S₁ / S₂ 鞍点':criticalMode==='maximum'?'<span class="critical-key maximum-key">■</span> M 局部极大点':'<span class="critical-key saddle-key">◆</span> S₁ / S₂ 鞍点 <span class="critical-key maximum-key">■</span> M 局部极大点';
+  criticalLegend.hidden=criticalMode==='none'||fn.kind!=='himmelblau';
+  criticalLegend.innerHTML=criticalMode==='maximum'?'<span class="critical-key maximum-key">■</span> M 局部极大点':criticalMode==='saddle'?'<span class="critical-key saddle-key">◆</span> S₁–S₄ 鞍点':criticalMode.startsWith('S')?`<span class="critical-key saddle-key">◆</span> ${criticalMode} 鞍点`:'<span class="critical-key saddle-key">◆</span> S₁–S₄ 鞍点 <span class="critical-key maximum-key">■</span> M 局部极大点';
   $('criteria-description').textContent=custom?'自定义函数：‖∇L‖ < 10⁻³ 记为“梯度足够小”；连续至少 10 个记录点满足且保持到当前步，才记为稳定。驻点可能是鞍点或极大值，全局最优性未验证。损失上升次数衡量爬坡，路径长度在参数平面中计算。':`收敛：|L − ${fn.minimumValue.toPrecision(5)}| < 10⁻⁶ 且 ‖∇L‖ < 10⁻³。稳定：连续至少 10 个记录点满足条件，且保持至当前步。损失上升次数衡量爬坡，不等同于方向震荡。路径长度在参数平面中计算。`;
 }
 async function applyFunction(restore=false){
@@ -330,7 +329,7 @@ function bindControls(){
   $('legend').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const name=b.dataset.method,on=!visible.has(name);if(!on&&visible.size===1){toast('请至少保留一种优化器，也可以在选择器中切换。');return;}if(on)visible.add(name);else visible.delete(name);syncOptimizerControls();setActiveMethods([...visible]);await refreshExperiment({preserveStep:true});});
   for(const id of ['lr','iterations','momentum','beta1','beta2','alpha'])$(id).addEventListener('input',scheduleRefresh);
   for(const id of ['start-x','start-y'])$(id).addEventListener('input',()=>{syncStartPreset();scheduleRefresh();});
-  $('start-preset').addEventListener('change',()=>{if($('start-preset').value==='custom'){$('start-x').focus();return;}const [x,y]=$('start-preset').value.split(',');$('start-x').value=x;$('start-y').value=y;scheduleRefresh();});
+  $('start-preset').addEventListener('change',()=>{if($('start-preset').value==='custom'){$('start-coordinate-fields').hidden=false;$('start-x').focus();return;}const [x,y]=$('start-preset').value.split(',');$('start-x').value=x;$('start-y').value=y;$('start-coordinate-fields').hidden=true;scheduleRefresh();});
   $('height-mode').addEventListener('change',()=>refreshExperiment({preserveStep:true}));
   $('reset-all').addEventListener('click',()=>{putConfig(DEFAULTS);applyOptimizerSelection('all');toast('已恢复题目默认参数。');});
   $('play').addEventListener('click',togglePlay);
@@ -426,8 +425,7 @@ function bindDetailControls(){
   $('focus-region').addEventListener('change',local);$('focus-radius').addEventListener('change',local);
   $('path-samples').addEventListener('change',()=>refreshExperiment({preserveStep:true}));
   for(const id of ['marker-mode','show-trails','show-minima','show-arrows','study-target','study-radius','color-mode'])$(id).addEventListener('change',local);
-  $('critical-mode').addEventListener('change',()=>{const mode=$('critical-mode').value;$('critical-coordinate-fields').hidden=mode!=='custom';local();});
-  for(const id of ['critical-x','critical-y'])$(id).addEventListener('change',local);
+  $('critical-mode').addEventListener('change',local);
   $('inspect-left').addEventListener('click',()=>turnInspection(-1));
   $('inspect-right').addEventListener('click',()=>turnInspection(1));
   $('inspect-close').addEventListener('click',()=>{$('study-target').value='hover';hideInspection();local();});
