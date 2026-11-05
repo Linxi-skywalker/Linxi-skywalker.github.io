@@ -208,8 +208,15 @@ function updateOverview(){
 }
 export function setCamera(target){
   cameraRevision++;
-  const layout=target==='top'?topLayout():surfaceLayout();
-  return Plotly.react(byId('surface'),mainData(),layout,surfaceConfig());
+  if(target==='top'){
+    const el=byId('surface'),layout=topLayout();
+    return Plotly.relayout(el,{
+      'xaxis.autorange':false,'yaxis.autorange':false,
+      'xaxis.range':[...terrain.xRange],'yaxis.range':[...terrain.yRange],
+      'xaxis.domain':layout.xaxis.domain,'yaxis.domain':layout.yaxis.domain
+    });
+  }
+  return Plotly.react(byId('surface'),mainData(),surfaceLayout(),surfaceConfig());
 }
 export function setInteractionMode(target){
   dragMode=target;
