@@ -64,12 +64,9 @@ export function simulate(name, config={}) {
   const run={name,points,diverged:false,reason:null,failedAt:null,function:getObjective()};
   for(let t=1;t<=c.iterations;t++) {
     const g=gradient(x,y),delta=[0,0];
-    const previousVelocity=velocity.slice(),previousV=v.slice();
-    const momentumTerm=[0,0],correctedM=[0,0],correctedV=[0,0];
     for(let i=0;i<2;i++) {
       if(name==='SGD') delta[i]=c.lr*g[i];
       if(name==='Momentum') {
-        momentumTerm[i]=c.momentum*velocity[i];
         velocity[i]=c.momentum*velocity[i]+g[i];
         delta[i]=c.lr*velocity[i];
       }
@@ -77,7 +74,6 @@ export function simulate(name, config={}) {
         m[i]=c.beta1*m[i]+(1-c.beta1)*g[i];
         v[i]=c.beta2*v[i]+(1-c.beta2)*g[i]*g[i];
         const mh=m[i]/(1-c.beta1**t),vh=v[i]/(1-c.beta2**t);
-        correctedM[i]=mh;correctedV[i]=vh;
         delta[i]=c.lr*mh/(Math.sqrt(vh)+c.epsilon);
       }
       if(name==='RMSprop') {
@@ -89,16 +85,6 @@ export function simulate(name, config={}) {
     if(![next.x,next.y,next.loss,next.gradNorm].every(Number.isFinite)||Math.abs(next.loss)>CRITERIA.maxLoss) {
       run.diverged=true; run.reason='下一步 |L| 超过 10¹²，或函数 / 梯度不再有限';run.failedAt=t;break;
     }
-    next.update={
-      from:{x,y,loss:points.at(-1).loss},
-      gradient:g.slice(),
-      displacement:[next.x-x,next.y-y],
-      momentumTerm:name==='Momentum'?momentumTerm:null,
-      state:name==='Momentum'?{previousVelocity,velocity:velocity.slice()}
-        :name==='Adam'?{firstMoment:m.slice(),secondMoment:v.slice(),correctedFirstMoment:correctedM,correctedSecondMoment:correctedV}
-        :name==='RMSprop'?{squareAverage:v.slice(),previousSquareAverage:previousV}
-        :null
-    };
     x=next.x;y=next.y;points.push(next);
   }
   return run;
