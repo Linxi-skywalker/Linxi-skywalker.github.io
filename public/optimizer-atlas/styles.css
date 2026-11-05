@@ -298,6 +298,20 @@ output { color: var(--accent); font: 12px var(--mono); }
 .mini-plot-heading { display: flex; align-items: end; justify-content: space-between; gap: 10px; padding: 23px 26px 6px; }
 .mini-plot-heading h3 { margin: 5px 0 0; font-size: 16px; font-weight: 500; letter-spacing: -.3px; }
 .plot-action-label { color: hsl(235 18% 59.4%); font-size: 9px; padding-bottom: 3px; }
+.fork-map-actions { display:flex; align-items:center; gap:10px; }
+.fork-select-toggle { min-height:31px; padding:6px 12px; border:1px solid #ddd9f1; border-radius:999px; background:#f8f7fd; color:#6257ac; font-size:10px; transition:background .18s ease,color .18s ease,border-color .18s ease; }
+.fork-select-toggle:hover { border-color:#bcb4e8; background:#f0eefb; }
+.fork-select-toggle[aria-pressed="true"] { border-color:#6e63c7; background:#6e63c7; color:#fff; }
+.fork-selection-panel { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:8px 26px 0; padding:11px 13px; border:1px solid #e6e3f4; border-radius:11px; background:#faf9fe; }
+.fork-selection-panel[hidden] { display:none; }
+.fork-selection-panel p { flex:1 1 100%; margin:0 0 2px; color:#6b6f85; font-size:10px; line-height:1.5; }
+.fork-selection-panel label { color:#555c70; font-size:10px; }
+.fork-selection-panel input { width:76px; min-height:30px; padding:5px 8px; border:1px solid #dfe2eb; border-radius:7px; background:#fff; color:var(--ink); font:11px var(--mono); }
+.fork-selection-panel button { min-height:30px; padding:6px 11px; border:1px solid #6e63c7; border-radius:7px; background:#6e63c7; color:#fff; font-size:10px; }
+.fork-selection-panel button:hover { background:#5f54b2; }
+.fork-selection-panel .fork-cancel { border-color:#e0e2eb; background:#fff; color:#666b7f; }
+.fork-selection-panel .fork-cancel:hover { background:#f0f1f6; }
+.fork-selection-active #contour { cursor:crosshair; }
 .mini-plot { height: 300px; }
 .coordinate-inputs[hidden] { display: none; }
 #scene-view.plot-mode-both .mini-plot-heading h3 { font-size: 15px; }
@@ -656,7 +670,7 @@ input[type="range"] { accent-color:var(--accent); }
 .fork-status.is-converged { color:#347d70; }
 .fork-status.is-diverged { color:#b84c56; }
 .fork-footnote { margin:12px 0 0; color:#85899d; font-size:9px; line-height:1.7; }
-@media (max-width: 600px) { .fork-panel { margin:12px 10px 4px; padding:17px 14px 14px; } .fork-heading h3 { font-size:17px; } .fork-heading p { max-width:260px; } .fork-source { flex-wrap:wrap; } .fork-source strong { flex-basis:calc(100% - 110px); } .fork-controls { grid-template-columns:1fr; gap:12px; padding-block:14px; } .fork-outcomes { grid-template-columns:1fr; } }
+@media (max-width: 600px) { .fork-panel { margin:12px 10px 4px; padding:17px 14px 14px; } .fork-heading h3 { font-size:17px; } .fork-heading p { max-width:260px; } .fork-source { flex-wrap:wrap; } .fork-source strong { flex-basis:calc(100% - 110px); } .fork-controls { grid-template-columns:1fr; gap:12px; padding-block:14px; } .fork-outcomes { grid-template-columns:1fr; } .fork-selection-panel { margin-inline:14px; } .fork-map-actions { gap:6px; } .fork-map-actions .plot-action-label { max-width:74px; text-align:right; line-height:1.35; } }
 @media (max-width: 700px) { .loss-chart-legend { gap: 6px 10px; } .loss-legend-item { font-size: 9px; } }
 
 /* A field plate drawn from the twelve loss contours of the opening example. */
