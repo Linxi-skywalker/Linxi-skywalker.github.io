@@ -1,5 +1,5 @@
-import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION} from './engine.js';
-import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js?v=20261105-2';
+import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION,continueSimulation,initialOptimizerState} from './engine.js';
+import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,onForkPoint,setForkData,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js?v=20261105-3';
 import {resolveRegion} from './inspection.js';
 import {createFullscreenCompare} from './fullscreen-compare.js?v=20261101-2';
 
@@ -12,6 +12,8 @@ const viewGestures=new Set();
 let viewHoldStart=null,dragMode='orbit';
 const visible=new Set(METHODS.map(m=>m.name));
 let surfaceStyle='mist';
+let forkData=null,forkContext=null;
+const forkColors=['#16877E','#B47721','#755BC1','#D05C69'];
 const fmt=n=>n===0?'0':Math.abs(n)<0.001?n.toExponential(2):n<10000?n.toFixed(4):n.toExponential(2);
 const lrText=n=>n>=0.001?n.toFixed(3):n.toFixed(4);
 
@@ -40,8 +42,47 @@ function syncOptimizerControls(){
   syncLossChartLegend();
 }
 function syncLossChartLegend(){
-  const contents=METHODS.filter(method=>visible.has(method.name)).map(method=>`<span class="loss-legend-item" style="--method-color:${method.color}"><i aria-hidden="true"></i>${method.name}</span>`).join('');
+  const contents=METHODS.filter(method=>visible.has(method.name)).map(method=>`<span class="loss-legend-item" style="--method-color:${method.color}"><i aria-hidden="true"></i>${method.name}</span>`).join('')+(forkData?.branches??[]).map(branch=>`<span class="loss-legend-item fork-legend-item" style="--method-color:${branch.color}"><i aria-hidden="true"></i>${branch.label}</span>`).join('');
   for(const id of ['loss-legend','loss-legend-main'])if($(id))$(id).innerHTML=contents;
+}
+function forkKey(config,fn){return JSON.stringify([fn?.expression,config.x,config.y,config.lr,config.iterations,config.momentum,config.beta1,config.beta2,config.alpha,config.epsilon]);}
+function cloneState(state){return {step:state.step,velocity:[...state.velocity],m:[...state.m],v:[...state.v]};}
+function clearFork(){forkData=null;forkContext=null;$('fork-panel').hidden=true;syncLossChartLegend();return setForkData(null);}
+async function createForks(source){
+  const momentumRun=experiment.runs.find(run=>run.name==='Momentum');
+  if(!momentumRun||!source.optimizerState){toast('这个路径点没有可恢复的优化器状态，请重新运行后再试。');return;}
+  const cfg=experiment.config,remaining=Math.max(0,cfg.iterations-source.t),sourceState=cloneState(source.optimizerState);
+  const resetState=cloneState(sourceState);resetState.velocity=[0,0];
+  const changedState=cloneState(sourceState);
+  const adamState=initialOptimizerState();
+  const cases=[
+    {label:'保持 Momentum',method:'Momentum',color:forkColors[0],config:{...cfg},state:sourceState,detail:'沿用当前 μ 与累积速度'},
+    {label:'清除历史动量',method:'Momentum',color:forkColors[1],config:{...cfg},state:resetState,detail:'速度归零，再继续积累'},
+    {label:`调整 μ = ${Number($('fork-momentum').value).toFixed(2)}`,method:'Momentum',color:forkColors[2],config:{...cfg,momentum:Number($('fork-momentum').value)},state:changedState,detail:'保留当前速度，改变 μ'},
+    {label:`切换 Adam`,method:'Adam',color:forkColors[3],config:{...cfg,beta1:Number($('fork-beta1').value),beta2:Number($('fork-beta2').value)},state:adamState,detail:`新建矩状态 · β₁ ${Number($('fork-beta1').value).toFixed(2)} / β₂ ${Number($('fork-beta2').value).toFixed(4)}`}
+  ];
+  const branches=cases.map(item=>{
+    const run=continueSimulation(item.method,item.config,source,item.state,remaining),summary=summarize(run);
+    return {...item,run,summary};
+  });
+  forkData={source:{...source,optimizerState:undefined},branches};forkContext=forkKey(cfg,experiment.function);
+  $('fork-location').textContent=`t = ${source.t} · (${source.x.toFixed(4)}, ${source.y.toFixed(4)})`;
+  $('fork-loss').textContent=fmt(source.loss);
+  $('fork-outcomes').innerHTML=branches.map((branch,i)=>{
+    const s=branch.summary,r=branch.run;
+    const status=r.diverged?'发散保护':s.converged?'达到收敛判据':remaining===0?'没有剩余步数':'未达收敛判据';
+    const destination=s.nearest?`最近谷底 ${s.nearest}`:'终点';
+    return `<article class="fork-outcome" style="--fork-color:${branch.color}"><span class="fork-number">0${i+1}</span><div class="fork-outcome-copy"><h4>${branch.label}</h4><p>${branch.detail}</p></div><div class="fork-outcome-value"><strong>${fmt(s.final.loss)}</strong><span>终点损失</span></div><div class="fork-outcome-meta"><span class="fork-status ${r.diverged?'is-diverged':s.converged?'is-converged':''}">${status}</span><span>${destination} · ${r.points.at(-1).t} 步</span></div></article>`;
+  }).join('');
+  $('fork-panel').hidden=false;syncLossChartLegend();
+  await setForkData(forkData);
+}
+function pickForkPoint(x,y){
+  if(rendering)return;
+  const run=experiment.runs.find(item=>item.name==='Momentum');if(!run?.points.length)return;
+  const source=run.points.reduce((best,p)=>Math.hypot(p.x-x,p.y-y)<Math.hypot(best.x-x,best.y-y)?p:best,run.points[0]);
+  if(!source.optimizerState)return;
+  createForks(source);
 }
 async function applyOptimizerSelection(choice){
   const names=choice==='all'?METHODS.map(m=>m.name):[choice];
@@ -125,7 +166,9 @@ async function refreshExperiment({preserveStep=false}={}){
   try{
     const c=configFromInputs();
     if($('start-x').value.trim()===''||$('start-y').value.trim()==='')throw new RangeError('请填写两个起点坐标。');
-    experiment=runExperiment(c);current=requestedStep!==null?Math.min(requestedStep,c.iterations):preserveStep?Math.min(current,c.iterations):c.iterations;
+    const nextExperiment=runExperiment(c),nextForkContext=forkKey(c,nextExperiment.function);
+    if(forkData&&forkContext!==nextForkContext){forkData=null;forkContext=null;$('fork-panel').hidden=true;syncLossChartLegend();await setForkData(null);}
+    experiment=nextExperiment;current=requestedStep!==null?Math.min(requestedStep,c.iterations):preserveStep?Math.min(current,c.iterations):c.iterations;
     syncFunctionUI();
     desiredStep=null;
     $('parameter-error').hidden=true;
@@ -135,7 +178,7 @@ async function refreshExperiment({preserveStep=false}={}){
     const colorNote=$('color-mode').value==='linear'?'颜色与损失成正比':'颜色采用平方根映射，增强谷底层次';
     $('height-caption').textContent=(top?'等比例俯视坐标':$('height-mode').value==='log'?(getObjective().kind==='custom'?'高度 sign(L)·log(1+|L|)':'高度 log(1 + L)'):'高度为真实损失 L')+(surfaceStyle==='science'?` · ${colorNote}`:'');
     $('scene-kind').textContent=`${getObjective().name} / ${top?'TOP VIEW':'SURFACE'}`;
-    $('scene-instructions').textContent=top?'鼠标悬浮细看 · 滚轮放大 · 拖动平移':'鼠标悬浮细看 · 拖动旋转 · 滚轮缩放';
+    $('scene-instructions').textContent=top?'悬浮看细节 · 点击 Momentum 路径分岔 · 滚轮放大':'悬浮看细节 · 点击 Momentum 路径分岔 · 拖动旋转';
     syncViewControls();
     updateFocusNote();
     syncTimeline();updateResults();notices();
@@ -344,6 +387,14 @@ function bindControls(){
   const camera=view=>{$('view-3d').classList.toggle('selected',view==='3d');$('view-top').classList.toggle('selected',view==='top');$('view-3d').setAttribute('aria-pressed',String(view==='3d'));$('view-top').setAttribute('aria-pressed',String(view==='top'));refreshExperiment({preserveStep:true});};
   $('view-3d').addEventListener('click',()=>camera('3d'));$('view-top').addEventListener('click',()=>camera('top'));$('reset-camera').addEventListener('click',()=>viewAction(()=>setCamera($('view-top').getAttribute('aria-pressed')==='true'?'top':'3d')));
   bindMapSelection((x,y)=>{if(rendering)return;$('start-x').value=x.toFixed(2);$('start-y').value=y.toFixed(2);syncStartPreset();scheduleRefresh();toast(`共同起点已设为 (${x.toFixed(2)}, ${y.toFixed(2)})。`);});
+  onForkPoint(pickForkPoint);
+  $('fork-clear').addEventListener('click',()=>clearFork());
+  for(const [id,digits] of [['fork-momentum',2],['fork-beta1',2],['fork-beta2',4]])$(id).addEventListener('input',()=>{
+    $(`${id}-value`).textContent=Number($(id).value).toFixed(digits);paintRange($(id));
+    if(!forkData)return;
+    const source=experiment.runs.find(run=>run.name==='Momentum')?.points.find(point=>point.t===forkData.source.t);
+    if(source)createForks(source);
+  });
   document.addEventListener('keydown',e=>{
     if(e.target.matches('input,select,textarea,button,summary,a,[contenteditable="true"]'))return;
     if(e.code==='Space'){e.preventDefault();togglePlay();}

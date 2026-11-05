@@ -55,37 +55,68 @@ export function validateConfig(c) {
 }
 function point(t,x,y) { return {t,x,y,loss:loss(x,y),gradNorm:Math.hypot(...gradient(x,y))}; }
 
+export function initialOptimizerState(){return {step:0,velocity:[0,0],m:[0,0],v:[0,0]};}
+function cloneOptimizerState(state){return {step:state.step,velocity:state.velocity.slice(),m:state.m.slice(),v:state.v.slice()};}
+function validateContinuationConfig(c,steps){
+  if(!Number.isFinite(c.lr)||c.lr<=0||c.lr>0.1)throw new RangeError('学习率应在 (0,0.1] 内');
+  if(!Number.isInteger(steps)||steps<0||steps>1000)throw new RangeError('剩余更新次数无效');
+  for(const k of ['momentum','beta1','beta2','alpha'])if(!Number.isFinite(c[k])||c[k]<0||c[k]>=1)throw new RangeError(`${k} 应在 [0,1) 内`);
+  if(!Number.isFinite(c.epsilon)||c.epsilon<=0)throw new RangeError('epsilon 必须大于零');
+}
+function advance(name,c,x,y,state,t){
+  const g=gradient(x,y),delta=[0,0];
+  state.step++;
+  for(let i=0;i<2;i++){
+    if(name==='SGD')delta[i]=c.lr*g[i];
+    if(name==='Momentum'){
+      state.velocity[i]=c.momentum*state.velocity[i]+g[i];
+      delta[i]=c.lr*state.velocity[i];
+    }
+    if(name==='Adam'){
+      state.m[i]=c.beta1*state.m[i]+(1-c.beta1)*g[i];
+      state.v[i]=c.beta2*state.v[i]+(1-c.beta2)*g[i]*g[i];
+      const mh=state.m[i]/(1-c.beta1**state.step),vh=state.v[i]/(1-c.beta2**state.step);
+      delta[i]=c.lr*mh/(Math.sqrt(vh)+c.epsilon);
+    }
+    if(name==='RMSprop'){
+      state.v[i]=c.alpha*state.v[i]+(1-c.alpha)*g[i]*g[i];
+      delta[i]=c.lr*g[i]/(Math.sqrt(state.v[i])+c.epsilon);
+    }
+  }
+  return {next:point(t,x-delta[0],y-delta[1]),state};
+}
+
 export function simulate(name, config={}) {
   if(!METHODS.some(m=>m.name===name)) throw new RangeError('未知优化器');
   const c={...DEFAULTS,...config}; validateConfig(c);
   let x=c.x,y=c.y;
-  const velocity=[0,0],m=[0,0],v=[0,0],points=[point(0,x,y)];
+  const state=initialOptimizerState(),first=point(0,x,y);first.optimizerState=cloneOptimizerState(state);const points=[first];
   if(![points[0].loss,points[0].gradNorm].every(Number.isFinite)||Math.abs(points[0].loss)>CRITERIA.maxLoss)throw new RangeError('当前起点处的函数或梯度无效，请更换起点。');
   const run={name,points,diverged:false,reason:null,failedAt:null,function:getObjective()};
   for(let t=1;t<=c.iterations;t++) {
-    const g=gradient(x,y),delta=[0,0];
-    for(let i=0;i<2;i++) {
-      if(name==='SGD') delta[i]=c.lr*g[i];
-      if(name==='Momentum') {
-        velocity[i]=c.momentum*velocity[i]+g[i];
-        delta[i]=c.lr*velocity[i];
-      }
-      if(name==='Adam') {
-        m[i]=c.beta1*m[i]+(1-c.beta1)*g[i];
-        v[i]=c.beta2*v[i]+(1-c.beta2)*g[i]*g[i];
-        const mh=m[i]/(1-c.beta1**t),vh=v[i]/(1-c.beta2**t);
-        delta[i]=c.lr*mh/(Math.sqrt(vh)+c.epsilon);
-      }
-      if(name==='RMSprop') {
-        v[i]=c.alpha*v[i]+(1-c.alpha)*g[i]*g[i];
-        delta[i]=c.lr*g[i]/(Math.sqrt(v[i])+c.epsilon);
-      }
-    }
-    const next=point(t,x-delta[0],y-delta[1]);
+    const {next}=advance(name,c,x,y,state,t);
     if(![next.x,next.y,next.loss,next.gradNorm].every(Number.isFinite)||Math.abs(next.loss)>CRITERIA.maxLoss) {
       run.diverged=true; run.reason='下一步 |L| 超过 10¹²，或函数 / 梯度不再有限';run.failedAt=t;break;
     }
+    next.optimizerState=cloneOptimizerState(state);
     x=next.x;y=next.y;points.push(next);
+  }
+  return run;
+}
+
+export function continueSimulation(name,config,startPoint,startState,steps){
+  if(!METHODS.some(m=>m.name===name))throw new RangeError('未知优化器');
+  const c={...DEFAULTS,...config};validateContinuationConfig(c,steps);
+  const state=cloneOptimizerState(startState??initialOptimizerState()),start=point(startPoint.t,startPoint.x,startPoint.y);
+  start.optimizerState=cloneOptimizerState(state);
+  const run={name,points:[start],diverged:false,reason:null,failedAt:null,function:getObjective()};
+  let x=start.x,y=start.y;
+  for(let i=1;i<=steps;i++){
+    const t=startPoint.t+i,{next}=advance(name,c,x,y,state,t);
+    if(![next.x,next.y,next.loss,next.gradNorm].every(Number.isFinite)||Math.abs(next.loss)>CRITERIA.maxLoss){
+      run.diverged=true;run.reason='下一步 |L| 超过 10¹²，或函数 / 梯度不再有限';run.failedAt=t;break;
+    }
+    next.optimizerState=cloneOptimizerState(state);x=next.x;y=next.y;run.points.push(next);
   }
   return run;
 }

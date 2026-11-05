@@ -20,7 +20,7 @@ const byId=id=>document.getElementById(id);
 const height=displayHeight;
 const lift=()=>terrain.lift;
 const shown=name=>!hidden.has(name);
-let hidden=new Set(),mode='log',runs=[],step=200,first=true;
+let hidden=new Set(),mode='log',runs=[],step=200,first=true,forkState=null,forkClickCallback=null,forkClickBound=false;
 let style='mist',focus='all',radius=0.6,samples=false,terrain=buildTerrain();
 let projectedRuns=[];
 let view='3d',lastExperiment,hoverBound=false,hoverFrame=0,hoverPoint=null,requestedFocus='all',cameraRevision=0;
@@ -99,6 +99,16 @@ function topData(experiment){
     ...runs.map((r,i)=>topPathTrace(r,i)),...runs.map((r,i)=>topPathTrace(r,i,true)),...runs.map((r,i)=>topPathTrace(r,i,false,'samples'))
   ];
 }
+const forkColors=['#16877E','#B47721','#755BC1','#D05C69'];
+function forkTraces(dimension){
+  if(!forkState)return [];
+  const is3d=dimension===3,source=forkState.source,lines=forkState.branches.map((branch,i)=>{
+    const points=branch.run.points.map(p=>is3d&&!inside(p)?null:p);
+    return {type:is3d?'scatter3d':'scatter',mode:'lines',name:branch.label,x:points.map(p=>p?.x??null),y:points.map(p=>p?.y??null),...(is3d?{z:points.map(p=>p?height(p.loss,mode)+lift()*4:null)}:{}),customdata:points.map(p=>p?.loss??null),text:points.map(p=>p?.t??null),connectgaps:false,showlegend:false,line:{color:forkColors[i],width:is3d?7:3.5,dash:i===0?'solid':'dash'},hovertemplate:'<b>%{fullData.name}</b><br>t = %{text}<br>w₁ = %{x:.6f}<br>w₂ = %{y:.6f}<br>L = %{customdata:.6g}<extra></extra>'};
+  });
+  const marker={type:is3d?'scatter3d':'scatter',mode:'markers+text',name:'分岔起点',x:[source.x],y:[source.y],...(is3d?{z:[height(source.loss,mode)+lift()*5]}:{}),text:[`分岔 · t=${source.t}`],textposition:'top center',textfont:{color:ink,size:10},marker:{size:is3d?7:10,color:'#18243B',symbol:'circle',line:{color:'#fff',width:2}},customdata:[source.loss],showlegend:false,hovertemplate:'<b>四路共同分岔点</b><br>t = '+source.t+'<br>(%{x:.7f}, %{y:.7f})<br>L = %{customdata:.7g}<extra></extra>'};
+  return [...lines,marker];
+}
 function topLayout(){
   const axis={tickfont:{...font,size:11},gridcolor:'#E4EAF2',zeroline:false,showline:true,linecolor:'#CBD6E4',fixedrange:false,nticks:6};
   const right=style==='science'?75:25;
@@ -109,9 +119,9 @@ function topLayout(){
 const surfaceConfig=()=>config;
 const motionData=()=>buildMotionOverlays(runs,step,terrain,{...display,mode,style,hidden},view==='top'?2:3);
 function mainData(){
-  const data=(view==='top'?topData(lastExperiment):surfaceData(lastExperiment)).map(trace=>({...trace,hovertemplate:null,hoverinfo:'none'}));
+  const data=(view==='top'?topData(lastExperiment):surfaceData(lastExperiment)).map(trace=>trace.name==='Momentum'?trace:{...trace,hovertemplate:null,hoverinfo:'none'});
   data[1].visible=display.minima;
-  return [...data,...motionData(),studyFrame(),...stationaryTraces(view==='top'?2:3)];
+  return [...data,...motionData(),studyFrame(),...stationaryTraces(view==='top'?2:3),...forkTraces(view==='top'?2:3)];
 }
 const mainLayout=()=>view==='top'?topLayout():surfaceLayout();
 function surfaceLayout(){
@@ -127,12 +137,12 @@ function contourData(experiment){
     {type:'contour',x:grid,y:grid,z:logarithmic,colorscale:contourColors,showscale:false,ncontours:18,contours:{coloring:'heatmap',showlabels:false},line:{width:0.6,color:'#C4D4E4'},hovertemplate:'w₁ = %{x:.2f}<br>w₂ = %{y:.2f}<extra>点击设置起点</extra>',showlegend:false},
     {type:'scatter',mode:'markers+text',x:getMinima().map(p=>p.x),y:getMinima().map(p=>p.y),text:getMinima().map(p=>p.id),textposition:'bottom right',textfont:{color:'#6F91AF',size:10},name:'全局谷底',marker:{symbol:'diamond',size:7,color:'#6F91AF',line:{color:'#fff',width:1}},showlegend:false,visible:display.minima,hovertemplate:'谷底 %{text}<br>(%{x:.3f}, %{y:.3f})<extra></extra>'},
     {type:'scatter',mode:'markers',x:[x],y:[y],name:'共同起点',marker:{size:7,color:ink,line:{color:'#fff',width:1.5}},showlegend:false,hovertemplate:'共同起点 (%{x:.2f}, %{y:.2f})<extra></extra>'},
-    ...runs.map((r,i)=>pathTrace(r,i,2)),...runs.map((r,i)=>miniHeadTrace(r,i)),...stationaryTraces(2)
+    ...runs.map((r,i)=>pathTrace(r,i,2)),...runs.map((r,i)=>miniHeadTrace(r,i)),...stationaryTraces(2),...forkTraces(2)
   ];
 }
 const axis2d={tickfont:{...font,size:9},gridcolor:'#EBEFF5',zeroline:false,ticks:'',showline:false,fixedrange:true};
 function contourLayout(){return {margin:{l:39,r:19,t:10,b:34},font,paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#FAFCFE',xaxis:{...axis2d,range:[-5,5],title:{text:'w₁',font},tickvals:[-4,-2,0,2,4]},yaxis:{...axis2d,range:[-5,5],title:{text:'w₂',font},tickvals:[-4,-2,0,2,4],scaleanchor:'x',scaleratio:1,constrain:'domain'},showlegend:false,dragmode:false,hovermode:'closest',hoverlabel:{font:{...font,color:ink},bgcolor:'#fff',bordercolor:'#D6DFEB'}};}
-function lossData(){return runs.map((r,i)=>({type:'scatter',mode:'lines',name:r.name,x:r.points.map(p=>p.t),y:r.points.map(p=>getObjective().kind==='custom'||getObjective().signed?p.loss:Math.max(1e-16,p.loss)),customdata:r.points.map(p=>p.loss),line:{color:METHODS[i].color,width:2.2},visible:shown(r.name),showlegend:false,hovertemplate:'<b>%{fullData.name}</b><br>t = %{x}<br>L = %{customdata:.4g}<extra></extra>'}));}
+function lossData(){return [...runs.map((r,i)=>({type:'scatter',mode:'lines',name:r.name,x:r.points.map(p=>p.t),y:r.points.map(p=>getObjective().kind==='custom'||getObjective().signed?p.loss:Math.max(1e-16,p.loss)),customdata:r.points.map(p=>p.loss),line:{color:METHODS[i].color,width:2.2},visible:shown(r.name),showlegend:false,hovertemplate:'<b>%{fullData.name}</b><br>t = %{x}<br>L = %{customdata:.4g}<extra></extra>'})),...(forkState?.branches??[]).map(branch=>({type:'scatter',mode:'lines',name:branch.label,x:branch.run.points.map(p=>p.t),y:branch.run.points.map(p=>getObjective().kind==='custom'||getObjective().signed?p.loss:Math.max(1e-16,p.loss)),customdata:branch.run.points.map(p=>p.loss),line:{color:branch.color,width:2.7,dash:'dash'},showlegend:false,hovertemplate:'<b>%{fullData.name}</b><br>t = %{x}<br>L = %{customdata:.4g}<extra></extra>'}))];}
 function cursorShape(){return {type:'line',xref:'x',yref:'paper',x0:step,x1:step,y0:0,y1:1,line:{color:'#718CAA',width:1,dash:'dot'}};}
 function lossLayout(experiment){
   if(experiment.function?.kind==='custom'||experiment.function?.signed)return {margin:{l:58,r:22,t:19,b:34},font,paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#fff',xaxis:{...axis2d,range:[0,experiment.config.iterations],title:{text:'更新次数 t',font}},yaxis:{...axis2d,type:'linear',autorange:true,title:{text:'真实函数值 L',font}},hovermode:'x unified',showlegend:false,shapes:[cursorShape()]};
@@ -164,6 +174,30 @@ export async function renderPlots(experiment,options={}) {
   updateOverview();
   bindHoverInspection();
   await refreshStudy();
+  bindForkClicks();
+}
+export async function setForkData(state){
+  forkState=state;
+  if(first||!lastExperiment)return;
+  await Promise.all([
+    Plotly.react(byId('surface'),mainData(),mainLayout(),surfaceConfig()),
+    Plotly.react(byId('contour'),contourData(lastExperiment),contourLayout(),miniConfig),
+    Plotly.react(byId('loss-chart-main'),lossData(),lossLayout(lastExperiment),miniConfig),
+    Plotly.react(byId('loss-chart'),lossData(),lossLayout(lastExperiment),miniConfig)
+  ]);
+  bindForkClicks();
+}
+export function onForkPoint(callback){forkClickCallback=callback;bindForkClicks();}
+function bindForkClicks(){
+  if(forkClickBound||first)return;
+  for(const id of ['surface','contour']){
+    const el=byId(id);
+    el.on('plotly_click',event=>{
+      const p=event.points?.find(point=>point.data?.name==='Momentum');
+      if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y))forkClickCallback?.(p.x,p.y);
+    });
+  }
+  forkClickBound=true;
 }
 export async function updateStep(t){
   preserveCamera(byId('surface'));
@@ -311,6 +345,7 @@ export function bindMapSelection(callback){
   const el=byId('contour');
   // Plotly consumes pointerup on its drag layer. Capture click before that layer handles it.
   el.addEventListener('click',e=>{
+    if(e.target.closest('.scatterlayer'))return;
     const layout=el._fullLayout;if(!layout) return;
     const rect=el.getBoundingClientRect(),xa=layout.xaxis,ya=layout.yaxis;
     const px=e.clientX-rect.left-xa._offset,py=e.clientY-rect.top-ya._offset;
