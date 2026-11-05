@@ -9,9 +9,9 @@
   <meta property="og:description" content="交互探索四种优化器在 Himmelblau 损失地形中的下降路径。">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>Optimizer Atlas</title>
-  <link rel="stylesheet" href="styles.css?v=20261105-5">
+  <link rel="stylesheet" href="styles.css?v=20261105-4">
   <script defer src="vendor/plotly-3.1.0.min.js"></script>
-  <script type="module" src="app.js?v=20261105-5"></script>
+  <script type="module" src="app.js?v=20261105-6"></script>
 </head>
 <body>
   <a class="skip-link" href="#lab">跳到交互实验</a>
@@ -110,7 +110,7 @@
       </section>
       <div id="run-notice" class="run-notice" role="status" hidden></div>
       <div class="plot-pair">
-        <article class="mini-plot-panel"><div class="mini-plot-heading"><div><span class="small-label">从上方，看清每一次转弯</span><h3>一张下山地图</h3></div><div class="fork-map-actions"><button id="fork-select-toggle" class="fork-select-toggle" type="button" aria-pressed="false">选择分叉点</button><span class="plot-action-label">空白处选起点</span></div></div><div id="fork-selection-panel" class="fork-selection-panel" hidden><p id="fork-selection-hint" role="status">点击 Momentum 路径上的一步，也可以输入迭代步数 t。</p><label for="fork-step-input">步数 t</label><input id="fork-step-input" type="number" min="0" step="1" value="50" aria-label="Momentum 路径分叉步数"><button id="fork-step-apply" type="button">从这一步分叉</button><button id="fork-select-cancel" class="fork-cancel" type="button">取消</button></div><div id="contour" class="mini-plot" role="img" aria-label="等高线地图：空白处可选起点，开启分叉选择后可点 Momentum 路径"></div></article>
+        <article class="mini-plot-panel"><div class="mini-plot-heading"><div><span class="small-label">从上方，看清每一次转弯</span><h3>一张下山地图</h3></div><span class="plot-action-label">空白处选起点 · 点击 Momentum 路径分岔</span></div><div id="contour" class="mini-plot" role="img" aria-label="可点击选择起点或从 Momentum 路径分岔的等高线地图"></div></article>
         <article class="mini-plot-panel loss-evidence-panel"><div class="mini-plot-heading"><div><span class="small-label">LOSS / ITERATION</span><h3>损失随时间下降</h3><div id="loss-legend" class="loss-chart-legend" aria-label="当前显示的优化器"></div></div><span id="loss-scale-label" class="plot-action-label">纵轴对数刻度</span></div><div id="loss-chart" class="mini-plot" role="img" aria-label="四种优化器的损失与更新次数关系"></div></article>
       </div>
       <div class="results-header"><div><h3>此刻的实验记录 <span id="result-step">t = 200</span></h3><p>拖动时间轴，指标跟随当前步数变化。</p></div><div class="export-buttons"><button id="export-csv">导出路径 CSV ↓</button><button id="export-json">实验 JSON ↓</button></div></div>

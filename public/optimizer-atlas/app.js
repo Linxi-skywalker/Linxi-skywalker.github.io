@@ -12,7 +12,7 @@ const viewGestures=new Set();
 let viewHoldStart=null,dragMode='orbit';
 const visible=new Set(METHODS.map(m=>m.name));
 let surfaceStyle='mist';
-let forkData=null,forkContext=null,forkSelectionMode=false;
+let forkData=null,forkContext=null;
 const forkColors=['#16877E','#B47721','#755BC1','#D05C69'];
 const fmt=n=>n===0?'0':Math.abs(n)<0.001?n.toExponential(2):n<10000?n.toFixed(4):n.toExponential(2);
 const lrText=n=>n>=0.001?n.toFixed(3):n.toFixed(4);
@@ -47,7 +47,7 @@ function syncLossChartLegend(){
 }
 function forkKey(config,fn){return JSON.stringify([fn?.expression,config.x,config.y,config.lr,config.iterations,config.momentum,config.beta1,config.beta2,config.alpha,config.epsilon]);}
 function cloneState(state){return {step:state.step,velocity:[...state.velocity],m:[...state.m],v:[...state.v]};}
-function clearFork(){forkData=null;forkContext=null;$('fork-panel').hidden=true;if(forkSelectionMode)setForkSelectionMode(false);syncLossChartLegend();return setForkData(null);}
+function clearFork(){forkData=null;forkContext=null;$('fork-panel').hidden=true;syncLossChartLegend();return setForkData(null);}
 async function createForks(source){
   const momentumRun=experiment.runs.find(run=>run.name==='Momentum');
   if(!momentumRun||!source.optimizerState){toast('这个路径点没有可恢复的优化器状态，请重新运行后再试。');return;}
@@ -78,38 +78,11 @@ async function createForks(source){
   await setForkData(forkData);
 }
 function pickForkPoint(x,y){
-  if(rendering||!forkSelectionMode)return;
+  if(rendering)return;
   const run=experiment.runs.find(item=>item.name==='Momentum');if(!run?.points.length)return;
   const source=run.points.reduce((best,p)=>Math.hypot(p.x-x,p.y-y)<Math.hypot(best.x-x,best.y-y)?p:best,run.points[0]);
   if(!source.optimizerState)return;
-  setForkSelectionMode(false);createForks(source);
-}
-function setForkSelectionMode(active){
-  forkSelectionMode=active;
-  $('fork-selection-panel').hidden=!active;
-  $('fork-select-toggle').setAttribute('aria-pressed',String(active));
-  $('fork-select-toggle').textContent=active?'正在选择…':'选择分叉点';
-  document.body.classList.toggle('fork-selection-active',active);
-  if(active){
-    const input=$('fork-step-input');syncForkStepBounds();input.value=String(Math.min(current,Number(input.max)));
-  }
-}
-function syncForkStepBounds(){
-  const points=experiment.runs.find(run=>run.name==='Momentum')?.points??[];
-  const maxStep=points.at(-1)?.t??0,input=$('fork-step-input');
-  input.max=String(maxStep);
-  $('fork-selection-hint').textContent=`点击 Momentum 路径选择一步，或输入 t = 0–${maxStep}。`;
-  if(Number(input.value)>maxStep)input.value=String(maxStep);
-}
-function applyForkStep(){
-  const input=$('fork-step-input'),step=Number(input.value);
-  const run=experiment.runs.find(item=>item.name==='Momentum');
-  const source=Number.isInteger(step)?run?.points.find(point=>point.t===step):null;
-  if(!source?.optimizerState){
-    $('fork-selection-hint').textContent=`请输入有效步数（0–${run?.points.at(-1)?.t??0}）。路径发生发散时，只能选取发散前已记录的步数。`;
-    input.focus();return;
-  }
-  setForkSelectionMode(false);createForks(source);
+  createForks(source);
 }
 async function applyOptimizerSelection(choice){
   const names=choice==='all'?METHODS.map(m=>m.name):[choice];
@@ -196,7 +169,6 @@ async function refreshExperiment({preserveStep=false}={}){
     const nextExperiment=runExperiment(c),nextForkContext=forkKey(c,nextExperiment.function);
     if(forkData&&forkContext!==nextForkContext){forkData=null;forkContext=null;$('fork-panel').hidden=true;syncLossChartLegend();await setForkData(null);}
     experiment=nextExperiment;current=requestedStep!==null?Math.min(requestedStep,c.iterations):preserveStep?Math.min(current,c.iterations):c.iterations;
-    if(forkSelectionMode)syncForkStepBounds();
     syncFunctionUI();
     desiredStep=null;
     $('parameter-error').hidden=true;
@@ -206,7 +178,7 @@ async function refreshExperiment({preserveStep=false}={}){
     const colorNote=$('color-mode').value==='linear'?'颜色与损失成正比':'颜色采用平方根映射，增强谷底层次';
     $('height-caption').textContent=(top?'等比例俯视坐标':$('height-mode').value==='log'?((getObjective().kind==='custom'||getObjective().signed)?'高度 sign(L)·log(1+|L|)':'高度 log(1 + L)'):'高度为真实损失 L')+(surfaceStyle==='science'?` · ${colorNote}`:'');
     $('scene-kind').textContent=`${getObjective().name} / ${top?'TOP VIEW':'SURFACE'}`;
-    $('scene-instructions').textContent=top?'悬浮看细节 · 选择分叉点后点击 Momentum 路径 · 滚轮放大':'悬浮看细节 · 选择分叉点后点击 Momentum 路径 · 拖动旋转';
+    $('scene-instructions').textContent=top?'悬浮看细节 · 点击 Momentum 路径分岔 · 滚轮放大':'悬浮看细节 · 点击 Momentum 路径分岔 · 拖动旋转';
     syncViewControls();
     updateFocusNote();
     syncTimeline();updateResults();notices();
@@ -421,12 +393,8 @@ function bindControls(){
   setSpeed(playbackRate);
   const camera=view=>{$('view-3d').classList.toggle('selected',view==='3d');$('view-top').classList.toggle('selected',view==='top');$('view-3d').setAttribute('aria-pressed',String(view==='3d'));$('view-top').setAttribute('aria-pressed',String(view==='top'));refreshExperiment({preserveStep:true});};
   $('view-3d').addEventListener('click',()=>camera('3d'));$('view-top').addEventListener('click',()=>camera('top'));$('reset-camera').addEventListener('click',()=>viewAction(()=>setCamera($('view-top').getAttribute('aria-pressed')==='true'?'top':'3d')));
-  bindMapSelection((x,y)=>{if(rendering||forkSelectionMode)return;$('start-x').value=x.toFixed(2);$('start-y').value=y.toFixed(2);syncStartPreset();scheduleRefresh();toast(`共同起点已设为 (${x.toFixed(2)}, ${y.toFixed(2)})。`);});
+  bindMapSelection((x,y)=>{if(rendering)return;$('start-x').value=x.toFixed(2);$('start-y').value=y.toFixed(2);syncStartPreset();scheduleRefresh();toast(`共同起点已设为 (${x.toFixed(2)}, ${y.toFixed(2)})。`);});
   onForkPoint(pickForkPoint);
-  $('fork-select-toggle').addEventListener('click',()=>setForkSelectionMode(!forkSelectionMode));
-  $('fork-select-cancel').addEventListener('click',()=>setForkSelectionMode(false));
-  $('fork-step-apply').addEventListener('click',applyForkStep);
-  $('fork-step-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();applyForkStep();}});
   $('fork-clear').addEventListener('click',()=>clearFork());
   for(const [id,digits] of [['fork-momentum',2],['fork-beta1',2],['fork-beta2',4]])$(id).addEventListener('input',()=>{
     $(`${id}-value`).textContent=Number($(id).value).toFixed(digits);paintRange($(id));
