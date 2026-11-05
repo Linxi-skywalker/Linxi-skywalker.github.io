@@ -101,4 +101,4 @@ export function createFullscreenCompare(root,config,view='3d'){
     resize:async()=>{await Promise.all(renders);cards.forEach(card=>{const chart=card.querySelector('.compare-chart');if(chart.isConnected&&chart.getClientRects().length&&chart._fullLayout)Plotly.Plots.resize(chart);});},
     setView:nextView=>{currentView=nextView;renders=cards.map(card=>renderCard(card,currentView));}
   };
-}\n\n
+}

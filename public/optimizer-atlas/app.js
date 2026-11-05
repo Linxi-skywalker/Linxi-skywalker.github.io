@@ -1,7 +1,7 @@
 import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION,continueSimulation,initialOptimizerState} from './engine.js';
 import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,onForkPoint,setForkData,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js?v=20261105-3';
 import {resolveRegion} from './inspection.js';
-import {createFullscreenCompare} from './fullscreen-compare.js?v=20261105-4';
+import {createFullscreenCompare} from './fullscreen-compare.js?v=20261105-5';
 
 const $=id=>document.getElementById(id);
 let experiment=runExperiment(),current=200,playing=false,frame=0,playOrigin=0,originStep=0,lastDraw=0,busy=false,rendering=false;
