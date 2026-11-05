@@ -1,4 +1,4 @@
-import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION} from './engine.js';
+import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION} from './engine.js?v=20261105-1';
 import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js?v=20261102-2';
 import {resolveRegion} from './inspection.js';
 import {createFullscreenCompare} from './fullscreen-compare.js?v=20261101-2';
@@ -37,6 +37,7 @@ function selectedExperiment(){const runs=experiment.runs.filter(r=>visible.has(r
 function syncOptimizerControls(){
   $('optimizer-select').value=visible.size===4?'all':visible.size===1?[...visible][0]:'custom';
   document.querySelectorAll('[data-method]').forEach(b=>b.setAttribute('aria-pressed',String(visible.has(b.dataset.method))));
+  if(visible.size===1)$('xray-method').value=[...visible][0];
   syncLossChartLegend();
 }
 function syncLossChartLegend(){
@@ -58,6 +59,7 @@ function updateResults(){
     return `<tr style="--method-color:${m.color}"><td><span class="table-dot"></span>${m.name}</td><td>(${s.final.x.toFixed(3)}, ${s.final.y.toFixed(3)})</td><td>${fmt(s.final.loss)}</td><td>${fmt(s.final.gradNorm)}</td><td><span class="status-chip ${r.diverged?'diverged':s.converged?'converged':''}">${status}</span><span class="basin-label">${custom?'全局最优性未验证':`${s.nearest} · d=${s.distance.toFixed(3)}`}</span></td><td>${s.stableAt===null?'—':s.stableAt}</td><td>${s.uphill}</td><td>${s.pathLength.toFixed(2)}</td></tr>`;
   }).join('');
   $('result-step').textContent=`t = ${current}`;
+  updateXray();
   if(current===0){$('finding-text').textContent='所选优化器从共同起点出发。播放路径，观察每次更新如何改变位置和损失。';return;}
   const active=summaries.map((s,i)=>({...s,name:METHODS[i].name,diverged:partial[i].diverged})).filter(s=>visible.has(s.name));
   if(custom){
@@ -79,6 +81,51 @@ function updateResults(){
   const unstable=active.filter(s=>!s.converged).map(s=>s.name);
   if(current===experiment.config.iterations&&unstable.length)bits.push(`${unstable.join('、')} 尚未满足严格收敛判据；到达预算不等于收敛。`);
   $('finding-text').textContent=bits.join(' ');
+}
+function xrayVector(v){return `(${v.map(n=>Number.isFinite(n)?fmt(n):'—').join(', ')})`;}
+function updateXray(){
+  const index=METHODS.findIndex(method=>method.name===$('xray-method').value),method=METHODS[index],run=experiment.runs[index];
+  if(!run||!method)return;
+  const panel=$('optimizer-xray');panel.style.setProperty('--xray-method-color',method.color);
+  const point=run.points[Math.min(current,run.points.length-1)],failed=run.diverged&&current>=run.failedAt;
+  const update=current>0&&current<run.points.length?run.points[current].update:null;
+  $('xray-position').textContent=`(${fmt(point.x)}, ${fmt(point.y)})`;
+  $('xray-gradient').textContent='—';$('xray-gradient-norm').textContent='‖∇L‖ = —';
+  $('xray-memory').textContent='—';$('xray-memory-note').textContent='—';
+  $('xray-displacement').textContent='—';$('xray-alignment').textContent='与负梯度方向的对齐度 —';
+  if(failed){
+    $('xray-summary').textContent=`第 ${run.failedAt} 步触发数值保护，没有有效的新位置；这里保留最后一个有效状态。`;
+    $('xray-position-note').textContent=`最后有效位置 · t = ${point.t}`;
+    $('xray-loss-change').textContent=`L = ${fmt(point.loss)}`;$('xray-outcome-note').textContent='发散步骤未写入有效轨迹。';
+    $('optimizer-xray').classList.add('xray-warning');return;
+  }
+  $('optimizer-xray').classList.remove('xray-warning');
+  if(current===0||!update){
+    $('xray-summary').textContent='t = 0 是起点，尚未发生更新；单步前进后可查看真实的梯度与优化器状态。';
+    $('xray-position-note').textContent='共同起点 · w₀';
+    $('xray-memory-title').textContent='历史状态';$('xray-memory').textContent='尚未建立';$('xray-memory-note').textContent='第 1 步更新后产生';
+    $('xray-loss-change').textContent=`L₀ = ${fmt(point.loss)}`;$('xray-outcome-note').textContent='等待执行第 1 次更新。';return;
+  }
+  const {from,gradient:g,displacement,state,momentumTerm}=update;
+  $('xray-summary').textContent=`第 ${current} 步 · ${method.name} 从该位置出发，按当前梯度与内部状态计算位移。`;
+  $('xray-position').textContent=`(${fmt(from.x)}, ${fmt(from.y)})`;
+  $('xray-position-note').textContent=`wₜ₋₁ = (${fmt(from.x)}, ${fmt(from.y)})`;
+  $('xray-gradient').textContent=xrayVector(g);$('xray-gradient-norm').textContent=`‖∇L‖ = ${fmt(Math.hypot(...g))}`;
+  if(method.name==='SGD'){
+    $('xray-memory-title').textContent='历史状态';$('xray-memory').textContent='无';$('xray-memory-note').textContent='只使用当前梯度';
+  }else if(method.name==='Momentum'){
+    $('xray-memory-title').textContent='惯性贡献 μvₜ₋₁';$('xray-memory').textContent=xrayVector(momentumTerm);$('xray-memory-note').textContent=`更新后速度 vₜ = ${xrayVector(state.velocity)}`;
+  }else if(method.name==='RMSprop'){
+    $('xray-memory-title').textContent='平方梯度平均 sₜ';$('xray-memory').textContent=xrayVector(state.squareAverage);$('xray-memory-note').textContent=`缩放分母 √sₜ + ε = ${xrayVector(state.squareAverage.map(v=>Math.sqrt(v)+experiment.config.epsilon))}`;
+  }else{
+    $('xray-memory-title').textContent='Adam 的偏差校正矩';$('xray-memory').textContent=`m̂ₜ = ${xrayVector(state.correctedFirstMoment)}`;$('xray-memory-note').textContent=`√v̂ₜ = ${xrayVector(state.correctedSecondMoment.map(Math.sqrt))}`;
+  }
+  $('xray-displacement').textContent=xrayVector(displacement);
+  const gradNorm=Math.hypot(...g),moveNorm=Math.hypot(...displacement),alignment=gradNorm&&moveNorm?-(g[0]*displacement[0]+g[1]*displacement[1])/(gradNorm*moveNorm):NaN;
+  $('xray-alignment').textContent=`与负梯度方向的对齐度 ${Number.isFinite(alignment)?alignment.toFixed(3):'—'}`;
+  const change=point.loss-from.loss,description=change<0?'损失下降':change>0?'损失上升':'损失不变';
+  $('xray-loss-change').textContent=`${fmt(from.loss)} → ${fmt(point.loss)}`;
+  $('xray-outcome-note').textContent=`${description} ${fmt(Math.abs(change))} · Lₜ − Lₜ₋₁ = ${fmt(change)}`;
 }
 function syncTimeline(){
   const max=experiment.config.iterations;
@@ -326,6 +373,7 @@ function bindControls(){
   setPlotMode('surface');
   $('legend').innerHTML=METHODS.map(m=>`<button data-method="${m.name}" aria-label="显示或隐藏 ${m.name} 路径" aria-pressed="true" style="--method-color:${m.color}"><span class="legend-line"></span>${m.name}</button>`).join('');
   $('optimizer-select').addEventListener('change',()=>applyOptimizerSelection($('optimizer-select').value));
+  $('xray-method').addEventListener('change',updateXray);
   $('legend').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const name=b.dataset.method,on=!visible.has(name);if(!on&&visible.size===1){toast('请至少保留一种优化器，也可以在选择器中切换。');return;}if(on)visible.add(name);else visible.delete(name);syncOptimizerControls();setActiveMethods([...visible]);await refreshExperiment({preserveStep:true});});
   for(const id of ['lr','iterations','momentum','beta1','beta2','alpha'])$(id).addEventListener('input',scheduleRefresh);
   for(const id of ['start-x','start-y'])$(id).addEventListener('input',()=>{syncStartPreset();scheduleRefresh();});

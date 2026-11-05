@@ -238,6 +238,27 @@ input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; border: 2px s
 .timeline-wrap { min-width: 0; }
 .playback-help { display: flex; justify-content: space-between; gap: 10px; padding: 4px 24px 13px; font-size: 9px; color: hsl(235 18% 61.0%); background: hsl(235 30% 97.3%); }
 
+/* One-step optimizer trace: real state, kept close to the transport controls. */
+.optimizer-xray { --xray-method-color: var(--accent); position: relative; margin: 0 20px 20px; padding: 21px 22px 17px; overflow: hidden; border: 1px solid hsl(235 22% 88%); border-radius: 15px; background: linear-gradient(115deg, #fff 0%, #fbfbff 62%, #f4f3fc 100%); box-shadow: 0 5px 20px #28274a08; }
+.optimizer-xray::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--xray-method-color); opacity: .82; }
+.xray-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 17px; }
+.xray-heading .small-label { color: var(--xray-method-color); font-size: 8px; letter-spacing: 1.5px; }
+.xray-heading h3 { margin: 3px 0 2px; font-size: 17px; font-weight: 550; letter-spacing: -.3px; }
+.xray-heading p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+.xray-method-select { display: flex; flex: 0 0 auto; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; }
+.xray-method-select select { min-width: 120px; min-height: 34px; padding: 6px 28px 6px 10px; border: 1px solid var(--line); border-radius: 8px; background-color: #fff; color: var(--ink); font-size: 10px; }
+.xray-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.xray-card { display: flex; min-width: 0; min-height: 80px; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 5px; padding: 11px 12px 10px; border: 1px solid #e9eaf2; border-radius: 10px; background: #ffffffb8; }
+.xray-card > span { color: hsl(235 18% 53%); font-size: 9px; }
+.xray-card strong { max-width: 100%; overflow-wrap: anywhere; color: var(--ink); font: 11px/1.5 var(--mono); letter-spacing: -.3px; }
+.xray-card small { max-width: 100%; color: hsl(235 18% 60%); font-size: 8px; line-height: 1.55; overflow-wrap: anywhere; }
+.xray-outcome { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 13px; min-height: 35px; margin-top: 11px; padding: 8px 2px 0; border-top: 1px solid #e9eaf2; }
+.xray-outcome-label { color: hsl(235 18% 55%); font-size: 9px; }
+.xray-outcome strong { color: var(--xray-method-color); font: 11px var(--mono); }
+.xray-outcome > span:last-child { color: hsl(235 18% 57%); font-size: 9px; }
+.optimizer-xray.xray-warning { border-color: #ecd7b3; background: linear-gradient(115deg, #fff 0%, #fffdf8 100%); }
+.optimizer-xray.xray-warning::before { background: #b88a4d; }
+
 /* Parameter rail */
 .controls-panel { background: hsl(235 30% 97.1%); border-left: 1px solid var(--line); padding: 26px 23px; }
 .panel-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
@@ -626,3 +647,15 @@ output { color: var(--accent); font: 12px var(--mono); }
 .loss-legend-item { display: inline-flex; align-items: center; gap: 6px; color: hsl(235 18% 45%); font-size: 10px; white-space: nowrap; }
 .loss-legend-item i { width: 15px; height: 3px; border-radius: 4px; background: var(--method-color); }
 @media (max-width: 700px) { .loss-chart-legend { gap: 6px 10px; } .loss-legend-item { font-size: 9px; } }
+@media (max-width: 900px) { .xray-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .optimizer-xray { margin: 0 12px 14px; padding: 17px 14px 13px; }
+  .xray-heading { align-items: flex-start; flex-direction: column; gap: 12px; margin-bottom: 13px; }
+  .xray-heading h3 { font-size: 16px; }
+  .xray-method-select { width: 100%; justify-content: space-between; }
+  .xray-method-select select { flex: 1; max-width: 180px; }
+  .xray-grid { gap: 6px; }
+  .xray-card { min-height: 78px; padding: 9px; }
+  .xray-card strong { font-size: 10px; }
+  .xray-outcome { gap: 5px 9px; }
+}
