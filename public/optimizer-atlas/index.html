@@ -9,9 +9,9 @@
   <meta property="og:description" content="交互探索四种优化器在 Himmelblau 损失地形中的下降路径。">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>Optimizer Atlas</title>
-  <link rel="stylesheet" href="styles.css?v=20261105-1">
+  <link rel="stylesheet" href="styles.css?v=20261105-4">
   <script defer src="vendor/plotly-3.1.0.min.js"></script>
-  <script type="module" src="app.js?v=20261105-1"></script>
+  <script type="module" src="app.js?v=20261105-4"></script>
 </head>
 <body>
   <a class="skip-link" href="#lab">跳到交互实验</a>
@@ -85,7 +85,7 @@
             <p class="control-hint">也可以在下方等高线地图上点选。</p>
           </div>
           <div class="control-group"><label class="control-label" for="lr">共同学习率 <output id="lr-value" for="lr">0.010</output></label><input id="lr" type="range" min="-4" max="-1" step="any" value="-2"><div class="range-ends"><span>0.0001</span><span>0.1</span></div><p class="control-hint">同一学习率，不代表相同的有效步幅。</p></div>
-          <div class="control-group"><label class="control-label" for="iterations">更新次数 <output id="iterations-value" for="iterations">200</output></label><input id="iterations" type="range" min="50" max="1000" step="50" value="200"><div class="range-ends"><span>50</span><span>1000</span></div></div>
+          <div class="control-group"><label class="control-label" for="iterations">更新次数 <output id="iterations-value" for="iterations">200</output></label><input id="iterations" type="range" min="1" max="1000" step="1" value="200"><div class="range-ends"><span>1</span><span>1000</span></div></div>
           <details class="advanced"><summary>算法参数 <span>＋</span></summary><div class="advanced-content">
             <label class="control-label" for="momentum">Momentum · μ <output id="momentum-value">0.90</output></label><input id="momentum" type="range" min="0" max="0.99" step="0.01" value="0.9">
             <label class="control-label" for="beta1">Adam · β₁ <output id="beta1-value">0.90</output></label><input id="beta1" type="range" min="0" max="0.99" step="0.01" value="0.9">
@@ -148,8 +148,8 @@
   <div class="dialog-mode-switch" role="group" aria-label="全屏显示模式"><button id="dialog-mode-single" class="selected" aria-pressed="true">单图</button><button id="dialog-mode-compare" aria-pressed="false">左右对比</button></div>
   <div id="dialog-compare-view" class="dialog-compare-view" role="group" aria-label="左右对比视图" hidden><span>两图视图</span><div><button id="compare-view-3d" class="selected" aria-pressed="true">立体</button><button id="compare-view-top" aria-pressed="false">俯视</button></div></div>
   <div id="dialog-single-controls" class="dialog-single-controls">
-    <label>优化器<select id="dialog-method"><option value="all">全部对比</option><option value="SGD">SGD</option><option value="Momentum">Momentum</option><option value="RMSprop">RMSprop</option><option value="Adam">Adam</option></select></label>
-    <label>学习率 η<input id="dialog-lr" type="number" min="0.0001" max="0.1" step="any"></label><label>起点 w₁<input id="dialog-x" type="number" min="-5" max="5" step="0.1"></label><label>起点 w₂<input id="dialog-y" type="number" min="-5" max="5" step="0.1"></label><label>更新步数<input id="dialog-iterations" type="number" min="1" max="1000" step="1"></label>
+    <label>优化器<select id="dialog-method"><option value="custom" disabled>自选组合</option><option value="all">全部对比</option><option value="SGD">SGD</option><option value="Momentum">Momentum</option><option value="RMSprop">RMSprop</option><option value="Adam">Adam</option></select></label>
+    <label>学习率 η<input id="dialog-lr" type="number" min="0.0001" max="0.1" step="any"></label><label>起点 w₁<input id="dialog-x" type="number" min="-5" max="5" step="any"></label><label>起点 w₂<input id="dialog-y" type="number" min="-5" max="5" step="any"></label><label>更新步数<input id="dialog-iterations" type="number" min="1" max="1000" step="1"></label>
     <details class="dialog-advanced"><summary>算法超参数</summary><div><label>Momentum μ<input id="dialog-momentum" type="number" min="0" max="0.99" step="0.01"></label><label>Adam β₁<input id="dialog-beta1" type="number" min="0" max="0.99" step="0.01"></label><label>Adam β₂<input id="dialog-beta2" type="number" min="0.9" max="0.9999" step="0.0001"></label><label>RMSprop α<input id="dialog-alpha" type="number" min="0.8" max="0.999" step="0.001"></label></div></details>
   </div>
 </div>

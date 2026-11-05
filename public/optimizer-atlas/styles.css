@@ -4,12 +4,12 @@
 :root {
   --paper: #f7f8fc;
   --surface: #fff;
-  --ink: #25263b;
-  --muted: #72768c;
-  --faint: #9498ad;
+  --ink: #202644;
+  --muted: #59627b;
+  --faint: #677087;
   --line: #e4e6f0;
   --soft: #f0f1f7;
-  --accent: #7068c9;
+  --accent: #544ca8;
   --accent-soft: #eeecfa;
   --blue: #647d8d;
   --sgd: #d84f57;
@@ -658,3 +658,25 @@ input[type="range"] { accent-color:var(--accent); }
 .fork-footnote { margin:12px 0 0; color:#85899d; font-size:9px; line-height:1.7; }
 @media (max-width: 600px) { .fork-panel { margin:12px 10px 4px; padding:17px 14px 14px; } .fork-heading h3 { font-size:17px; } .fork-heading p { max-width:260px; } .fork-source { flex-wrap:wrap; } .fork-source strong { flex-basis:calc(100% - 110px); } .fork-controls { grid-template-columns:1fr; gap:12px; padding-block:14px; } .fork-outcomes { grid-template-columns:1fr; } }
 @media (max-width: 700px) { .loss-chart-legend { gap: 6px 10px; } .loss-legend-item { font-size: 9px; } }
+
+/* A field plate drawn from the twelve loss contours of the opening example. */
+.formula-note { isolation:isolate; overflow:hidden; background:#eef0fb; border-color:#d6dbed; }
+.formula-note::after { content:""; inset:0 0 0 auto; width:54%; z-index:-1;
+  background:linear-gradient(90deg,#eef0fb,transparent 65%),url("contours.svg") center right / auto 100% no-repeat;
+  opacity:.68; }
+.chapter,.eyebrow,.compare-card-heading header { font-variant-numeric:tabular-nums; }
+.chapter { display:inline-flex; align-items:center; gap:.65em; font-weight:600; }
+.chapter::before { content:""; width:1.45em; height:2px; background:currentColor; }
+.header-action,.primary-link,.play-button { font-weight:600; }
+.style-tabs button.selected,.view-tabs button.selected,.plot-mode-tabs button.selected,
+.dialog-mode-switch button.selected,.dialog-compare-view button.selected,.camera-toolbar button[aria-pressed="true"] {
+  color:#403685; background:#fff; box-shadow:inset 0 0 0 1px #c3bde4,0 1px 3px #20264412; font-weight:600;
+}
+.loss-legend-item,.compare-controls label,.compare-hyperparams label,.fork-controls label {
+  font-size:11px; color:var(--muted);
+}
+.fork-panel,.mini-plot-panel,.compare-card,.experiment-card { border-color:var(--line); }
+.fork-source,.compare-result,.formula-meta,output { font-variant-numeric:tabular-nums; }
+.method-grid p,.experiment-card p { font-size:12px; color:var(--muted); }
+.compare-result[data-error="true"] { color:#992d41; }
+@media(max-width:600px){ .formula-note::after { width:43%; opacity:.46; } }

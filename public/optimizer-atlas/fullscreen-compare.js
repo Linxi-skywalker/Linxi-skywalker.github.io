@@ -14,8 +14,8 @@ function cardMarkup(side,method,c){
     <header class="compare-card-heading"><div><span>${side==='left'?'LEFT LANDSCAPE':'RIGHT LANDSCAPE'}</span><h3 data-compare-title>${method}</h3></div><select data-key="method" aria-label="${side==='left'?'左图':'右图'}优化器">${methods}</select></header>
     <div class="compare-controls">
       <label>学习率 η<input data-key="lr" type="number" min="0.0001" max="0.1" step="any" value="${c.lr}"></label>
-      <label>起点 w₁<input data-key="x" type="number" min="-5" max="5" step="0.1" value="${c.x}"></label>
-      <label>起点 w₂<input data-key="y" type="number" min="-5" max="5" step="0.1" value="${c.y}"></label>
+      <label>起点 w₁<input data-key="x" type="number" min="-5" max="5" step="any" value="${c.x}"></label>
+      <label>起点 w₂<input data-key="y" type="number" min="-5" max="5" step="any" value="${c.y}"></label>
       <label>更新步数<input data-key="iterations" type="number" min="1" max="1000" step="1" value="${c.iterations}"></label>
     </div>
     <details class="compare-advanced"><summary>优化器超参数 <small data-param-summary></small></summary><div class="compare-hyperparams">
@@ -34,7 +34,8 @@ function readConfig(card){
   for(const input of card.querySelectorAll('[data-key]')){
     const key=input.dataset.key;
     if(key==='method'){c.method=input.value;continue;}
-    c[key]=Number(input.value);
+    if(input.value===''||!input.validity.valid)throw new RangeError('请为'+input.closest('label').firstChild.textContent+'填写范围内的数值。');
+    c[key]=input.valueAsNumber;
   }
   return c;
 }
@@ -59,7 +60,7 @@ function chartData(run,method,view,terrain){
   }
   return [
     {type:'surface',x:terrain.x,y:terrain.y,z:terrain.z,customdata:terrain.raw,colorscale:mist,showscale:false,hovertemplate:'w₁=%{x:.4f}<br>w₂=%{y:.4f}<br>L=%{customdata:.5g}<extra></extra>',contours:{z:{show:true,color:'#AFC5D9',width:1,highlight:false}},lighting:{ambient:0.95,diffuse:0.7,roughness:0.8,specular:0.15}},
-    ...(minima.length?[{type:'scatter3d',mode:'markers+text',name:'全局最小值',x:minima.map(p=>p.x),y:minima.map(p=>p.y),z:minima.map(()=>terrain.lift),text:minima.map(p=>p.id),textposition:'top center',textfont:{color:ink,size:10},marker:{symbol:'diamond',size:5,color:'#fff',line:{color:'#426B95',width:2}},hovertemplate:'谷底 %{text}<br>(%{x:.4f}, %{y:.4f})<extra></extra>'}]:[]),
+    ...(minima.length?[{type:'scatter3d',mode:'markers+text',name:'全局最小值',x:minima.map(p=>p.x),y:minima.map(p=>p.y),z:minima.map(()=>displayHeight(getObjective().minimumValue)+terrain.lift),text:minima.map(p=>p.id),textposition:'top center',textfont:{color:ink,size:10},marker:{symbol:'diamond',size:5,color:'#fff',line:{color:'#426B95',width:2}},hovertemplate:'谷底 %{text}<br>(%{x:.4f}, %{y:.4f})<extra></extra>'}]:[]),
     {type:'scatter3d',mode:'lines',name:method,x:path.map(p=>p?.x??null),y:path.map(p=>p?.y??null),z:path.map(p=>p?displayHeight(p.loss)+terrain.lift*4:null),connectgaps:false,line:{color,width:7},hovertemplate:`<b>${method}</b><br>t=%{text}<br>w₁=%{x:.5f}<br>w₂=%{y:.5f}<br>L=%{customdata:.5g}<extra></extra>`,text:path.map(p=>p?.t??null),customdata:path.map(p=>p?.loss??null)},
     {type:'scatter3d',mode:'markers',name:'当前位置',x:[run.points.at(-1).x],y:[run.points.at(-1).y],z:[displayHeight(run.points.at(-1).loss)+terrain.lift*4],marker:{size:5,color,line:{color:'#fff',width:2}},hovertemplate:'当前位置<br>(%{x:.5f}, %{y:.5f})<extra></extra>'}
   ];
@@ -74,9 +75,9 @@ function statusText(run,method){
   return `${method} · ${s} 步${run.diverged?' · 数值发散':''}　位置 (${p.x.toFixed(3)}, ${p.y.toFixed(3)})　L = ${p.loss.toExponential(2)}`;
 }
 async function renderCard(card,view){
-  const c=readConfig(card),chart=card.querySelector('.compare-chart'),result=card.querySelector('.compare-result');
+  const chart=card.querySelector('.compare-chart'),result=card.querySelector('.compare-result');
   try{
-    syncParamLabels(card,c.method);
+    const c=readConfig(card);syncParamLabels(card,c.method);
     const run=simulate(c.method,{...defaultValue,...c});
     const terrain=buildTerrain('all',0.6,'log');
     const traces=chartData(run,c.method,view,terrain);
@@ -87,16 +88,17 @@ async function renderCard(card,view){
   }catch(error){result.textContent=error.message;result.dataset.error='true';}
 }
 export function createFullscreenCompare(root,config,view='3d'){
-  let currentView=view;
+  let currentView=view,renders=[];
   root.innerHTML=cardMarkup('left','SGD',config)+cardMarkup('right','Adam',config);
   const cards=[...root.querySelectorAll('[data-compare-side]')];
   for(const card of cards){
     syncParamLabels(card,readConfig(card).method);
-    card.addEventListener('change',()=>renderCard(card,currentView));
-    renderCard(card,view);
+    card.addEventListener('change',()=>{renders.push(renderCard(card,currentView));});
+    renders.push(renderCard(card,view));
   }
   return {
-    resize:()=>cards.forEach(card=>Plotly.Plots.resize(card.querySelector('.compare-chart'))),
-    setView:nextView=>{currentView=nextView;cards.forEach(card=>renderCard(card,currentView));}
+    destroy:()=>{for(const card of cards)Plotly.purge(card.querySelector('.compare-chart'));root.replaceChildren();},
+    resize:async()=>{await Promise.all(renders);cards.forEach(card=>{const chart=card.querySelector('.compare-chart');if(chart.isConnected&&chart.getClientRects().length&&chart._fullLayout)Plotly.Plots.resize(chart);});},
+    setView:nextView=>{currentView=nextView;renders=cards.map(card=>renderCard(card,currentView));}
   };
-}
+}\n\n

@@ -1,7 +1,7 @@
 import {DEFAULTS,METHODS,MINIMA,CRITERIA,runExperiment,summarize,getMinima,getObjective,setObjective,validateConfig,HIMMELBLAU_EXPRESSION,continueSimulation,initialOptimizerState} from './engine.js';
 import {renderPlots,updateStep,setCamera,setVisibility,setActiveMethods,bindMapSelection,onForkPoint,setForkData,zoomCamera,resizeSurface,showInspection,hideInspection,turnInspection,setInteractionMode,setInspectionInteraction} from './plots.js?v=20261105-3';
 import {resolveRegion} from './inspection.js';
-import {createFullscreenCompare} from './fullscreen-compare.js?v=20261101-2';
+import {createFullscreenCompare} from './fullscreen-compare.js?v=20261105-4';
 
 const $=id=>document.getElementById(id);
 let experiment=runExperiment(),current=200,playing=false,frame=0,playOrigin=0,originStep=0,lastDraw=0,busy=false,rendering=false;
@@ -176,7 +176,7 @@ async function refreshExperiment({preserveStep=false}={}){
     $('height-mode').disabled=top;
     $('scale-label').textContent='高度';$('color-control').hidden=surfaceStyle!=='science';
     const colorNote=$('color-mode').value==='linear'?'颜色与损失成正比':'颜色采用平方根映射，增强谷底层次';
-    $('height-caption').textContent=(top?'等比例俯视坐标':$('height-mode').value==='log'?(getObjective().kind==='custom'?'高度 sign(L)·log(1+|L|)':'高度 log(1 + L)'):'高度为真实损失 L')+(surfaceStyle==='science'?` · ${colorNote}`:'');
+    $('height-caption').textContent=(top?'等比例俯视坐标':$('height-mode').value==='log'?((getObjective().kind==='custom'||getObjective().signed)?'高度 sign(L)·log(1+|L|)':'高度 log(1 + L)'):'高度为真实损失 L')+(surfaceStyle==='science'?` · ${colorNote}`:'');
     $('scene-kind').textContent=`${getObjective().name} / ${top?'TOP VIEW':'SURFACE'}`;
     $('scene-instructions').textContent=top?'悬浮看细节 · 点击 Momentum 路径分岔 · 滚轮放大':'悬浮看细节 · 点击 Momentum 路径分岔 · 拖动旋转';
     syncViewControls();
@@ -234,8 +234,8 @@ function setPlotMode(mode){
     $(id).setAttribute('aria-pressed',String(key===valid));
   }
   requestAnimationFrame(()=>{
-    if(window.Plotly)for(const id of ['surface','loss-chart','loss-chart-main']){const plot=$(id);if(plot?.data)Plotly.Plots.resize(plot);}
-    resizeSurface();
+    if(window.Plotly)for(const id of ['surface','loss-chart','loss-chart-main']){const plot=$(id);if(plot?.data&&plot.getClientRects().length)Plotly.Plots.resize(plot);}
+    if(scene.getClientRects().length)resizeSurface();
   });
 }
 async function viewAction(action){
@@ -301,8 +301,15 @@ function syncFunctionUI(){
   $('minima-heading').querySelector('small').textContent=`L = ${fn.minimumValue.toPrecision(5)} · 悬浮看细节，点击定位`;
   $('minima-list').innerHTML=minima.map(p=>`<button data-minimum="${p.id}" aria-pressed="false" aria-label="放大全局最小值"><span class="minimum-id">${p.id}</span><span><strong>(${p.x.toFixed(4)}, ${p.y.toFixed(4)})</strong><small>全局最小值 · L = ${fn.minimumValue.toPrecision(5)}</small></span><span class="minimum-arrow">↗</span></button>`).join('');
   const focus=$('focus-region');
-  for(const option of Array.from(focus.options).filter(o=>o.value==='G'))option.remove();
-  if(fn.kind==='preset'&&minima.length){const option=document.createElement('option');option.value='G';option.textContent='全局最小值';focus.append(option);}
+  for(const option of focus.options){
+    option.hidden=option.disabled=option.value!=='all'&&!minima.some(p=>p.id===option.value);
+  }
+  if(focus.selectedOptions[0]?.disabled)focus.value='all';
+  const saddles=$('start-preset').querySelector('optgroup:last-of-type');
+  saddles.hidden=saddles.disabled=fn.kind!=='himmelblau';
+  if(saddles.contains($('start-preset').selectedOptions[0])&&saddles.disabled){
+    $('start-preset').value='custom';$('start-coordinate-fields').hidden=false;
+  }
   document.querySelectorAll('#study-target option').forEach(option=>{if(['A','B','C','D','G'].includes(option.value))option.disabled=custom||!minima.some(p=>p.id===option.value);});
   const lossScale=custom||fn.signed?'线性刻度 · 保留负值':'纵轴对数刻度';
   $('loss-scale-label').textContent=lossScale;$('loss-scale-label-main').textContent=lossScale;
@@ -374,7 +381,7 @@ function bindControls(){
   for(const id of ['start-x','start-y'])$(id).addEventListener('input',()=>{syncStartPreset();scheduleRefresh();});
   $('start-preset').addEventListener('change',()=>{if($('start-preset').value==='custom'){$('start-coordinate-fields').hidden=false;$('start-x').focus();return;}const [x,y]=$('start-preset').value.split(',');$('start-x').value=x;$('start-y').value=y;$('start-coordinate-fields').hidden=true;scheduleRefresh();});
   $('height-mode').addEventListener('change',()=>refreshExperiment({preserveStep:true}));
-  $('reset-all').addEventListener('click',()=>{putConfig(DEFAULTS);applyOptimizerSelection('all');toast('已恢复题目默认参数。');});
+  $('reset-all').addEventListener('click',()=>{const normalize=s=>s.replace(/\s/g,'').replaceAll('**','^');const preset=Object.values(functionExamples).find(p=>normalize(p.expression)===normalize(getObjective().expression));putConfig({...DEFAULTS,...preset});applyOptimizerSelection('all');toast('已重置当前函数的实验参数。');});
   $('play').addEventListener('click',togglePlay);
   $('step').addEventListener('click',()=>stepOnce(1));
   $('step-back').addEventListener('click',()=>stepOnce(-1));
@@ -396,6 +403,7 @@ function bindControls(){
     if(source)createForks(source);
   });
   document.addEventListener('keydown',e=>{
+    if($('terrain-dialog').open&&fullscreenMode==='compare')return;
     if(e.target.matches('input,select,textarea,button,summary,a,[contenteditable="true"]'))return;
     if(e.code==='Space'){e.preventDefault();togglePlay();}
     if(!rendering&&(e.code==='ArrowRight'||e.code==='ArrowLeft')){e.preventDefault();stepOnce(e.code==='ArrowRight'?1:-1);}
@@ -423,7 +431,7 @@ function updateFocusNote(){
 }
 function syncFullscreenControls(){
   const c=configFromInputs();
-  $('dialog-method').value=visible.size===4?'all':visible.size===1?[...visible][0]:'all';
+  $('dialog-method').value=$('optimizer-select').value;
   for(const [id,key] of [['dialog-lr','lr'],['dialog-x','x'],['dialog-y','y'],['dialog-iterations','iterations'],['dialog-momentum','momentum'],['dialog-beta1','beta1'],['dialog-beta2','beta2'],['dialog-alpha','alpha']])$(id).value=c[key];
 }
 function syncCompareViewControls(view){
@@ -454,7 +462,7 @@ function bindFullscreenControls(){
   $('dialog-method').addEventListener('change',async()=>{await applyOptimizerSelection($('dialog-method').value);syncFullscreenControls();});
   const fields={ 'dialog-lr':'lr','dialog-x':'x','dialog-y':'y','dialog-iterations':'iterations','dialog-momentum':'momentum','dialog-beta1':'beta1','dialog-beta2':'beta2','dialog-alpha':'alpha' };
   for(const [id,key] of Object.entries(fields))$(id).addEventListener('change',()=>{
-    const c=configFromInputs();c[key]=Number($(id).value);putConfig(c);syncFullscreenControls();scheduleRefresh();
+    const input=$(id);if(!input.reportValidity()||input.value===''){syncFullscreenControls();return;}const c=configFromInputs();c[key]=input.valueAsNumber;putConfig(c);syncFullscreenControls();scheduleRefresh();
   });
   $('dialog-mode-single').addEventListener('click',()=>setFullscreenMode('single'));
   $('dialog-mode-compare').addEventListener('click',()=>setFullscreenMode('compare'));
@@ -498,6 +506,7 @@ function bindDetailControls(){
   });
   $('close-scene').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('close',()=>{
+    fullscreenCompare?.destroy();fullscreenCompare=null;
     home.after(scene);scene.hidden=false;$('dialog-single-controls').hidden=false;$('dialog-compare-view').hidden=true;$('expand-scene').hidden=false;document.body.classList.remove('scene-expanded');
     requestAnimationFrame(()=>resizeSurface());$('expand-scene').focus();
   });
@@ -508,4 +517,4 @@ async function init(){
   while(!window.Plotly){if(performance.now()-start>20000){$('plot-loading').textContent='绘图库未加载。请通过本地服务器打开页面，并确认 vendor 文件完整。';return;}await new Promise(r=>setTimeout(r,60));}
   bindControls();putConfig(DEFAULTS);await refreshExperiment();
 }
-init().catch(error=>{console.error(error);$('plot-loading').textContent='实验加载失败，请刷新页面。';});
+init().catch(error=>{console.error(error);$('plot-loading').textContent='实验加载失败，请刷新页面。';});\n\n
